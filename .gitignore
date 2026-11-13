@@ -1,0 +1,8 @@
+/web/
+/vendor/
+/composer.lock
+/composer.json.backup
+/.superpowers/
+/.phpunit.cache/
+/node_modules/
+/.ddev/

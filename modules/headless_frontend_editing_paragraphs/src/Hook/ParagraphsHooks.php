@@ -9,6 +9,7 @@ use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\TypedData\TranslatableInterface;
 use Drupal\headless_frontend_editing\Hook\EntityFormHooks;
@@ -29,6 +30,7 @@ final class ParagraphsHooks {
     private readonly ParagraphTree $tree,
     private readonly RouteMatchInterface $routeMatch,
     private readonly ModuleExtensionList $moduleList,
+    private readonly AccountInterface $currentUser,
   ) {}
 
   /**
@@ -101,8 +103,7 @@ final class ParagraphsHooks {
     if ($target->fieldName !== NULL || !$paragraph instanceof ParagraphInterface || !$this->tree->load($paragraph->uuid())) {
       return;
     }
-    $root = $this->tree->root($paragraph);
-    if (!$root || !$root->access('update') || !$this->canRearrange($paragraph)) {
+    if (!$this->tree->access($paragraph, $this->currentUser)->isAllowed() || !$this->canRearrange($paragraph)) {
       return;
     }
     $items = $this->tree->items($paragraph);

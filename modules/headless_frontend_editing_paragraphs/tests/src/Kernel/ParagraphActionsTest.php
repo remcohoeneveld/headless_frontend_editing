@@ -7,6 +7,7 @@ namespace Drupal\Tests\headless_frontend_editing_paragraphs\Kernel;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\headless_frontend_editing\Controller\ProtocolController;
 use Drupal\headless_frontend_editing_paragraphs\ParagraphTree;
+use Drupal\headless_frontend_editing_paragraphs_test\Hook\LockedFieldHooks;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\node\Entity\Node;
@@ -34,6 +35,7 @@ final class ParagraphActionsTest extends KernelTestBase {
   protected static $modules = [
     'system', 'user', 'field', 'file', 'text', 'node', 'language', 'content_translation',
     'entity_reference_revisions', 'paragraphs', 'headless_frontend_editing', 'headless_frontend_editing_paragraphs',
+    'headless_frontend_editing_paragraphs_test',
   ];
 
   /**
@@ -169,6 +171,23 @@ final class ParagraphActionsTest extends KernelTestBase {
     $files = array_column($library['js'], 'data');
     $this->assertStringEndsWith('/js/host.js', $files[0]);
     $this->assertStringEndsWith('headless_frontend_editing_paragraphs/js/actions.js', end($files));
+  }
+
+  /**
+   * Tests that a section field the user may not edit only offers edit.
+   */
+  public function testLockedField(): void {
+    $this->addParagraphsType('group');
+    $this->addParagraphsField('group', 'field_children', 'paragraph');
+    $child = Paragraph::create(['type' => 'text']);
+    $sibling = Paragraph::create(['type' => 'text']);
+    $group = Paragraph::create(['type' => 'group', 'field_children' => [$child, $sibling]]);
+    Node::create(['type' => 'page', 'title' => 'Page', 'field_sections' => [$group]])->save();
+    $this->assertContains('up', array_keys($this->actions([$child])['paragraph:' . $child->uuid()]));
+
+    // A locked ancestor field counts too.
+    $this->container->get('state')->set(LockedFieldHooks::STATE, 'field_sections');
+    $this->assertSame(['edit'], array_keys($this->actions([$child])['paragraph:' . $child->uuid()]));
   }
 
 }

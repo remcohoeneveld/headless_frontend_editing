@@ -1,0 +1,5 @@
+name: Headless Frontend Editing Paragraphs test
+type: module
+description: 'Denies editing a field named in state, for tests.'
+package: Testing
+core_version_requirement: ^11.4 || ^12

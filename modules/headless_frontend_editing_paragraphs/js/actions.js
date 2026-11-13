@@ -42,7 +42,7 @@
   ['up', 'down'].forEach((direction) => {
     hfe.actions[direction] = (target) => {
       const move = url(target, `move/${direction}`);
-      if (!move) {
+      if (!move || !hfe.confirmDiscard()) {
         return;
       }
       fetch(Drupal.url('session/token'))
@@ -67,7 +67,7 @@
   }).forEach(([id, path]) => {
     hfe.actions[id] = (target) => {
       const open = url(target, path);
-      if (open) {
+      if (open && hfe.confirmDiscard()) {
         hfe.open(open);
       }
     };

@@ -116,9 +116,13 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $this->getSession()->switchToIFrame();
     $this->assertSame(1, $this->getSession()->evaluateScript('window.hfeConfirms'));
     $this->assertFalse($this->assertSession()->elementExists('css', '.hfe-editor')->hasAttribute('hidden'));
+    // Another action asks too; declining keeps the changed form.
+    $this->getSession()->executeScript("Drupal.headlessFrontendEditing.actions.edit('node:{$this->node->uuid()}', 'en');");
+    $this->assertSame(2, $this->getSession()->evaluateScript('window.hfeConfirms'));
+    $this->assertStringEndsWith(':title', urldecode($this->getSession()->evaluateScript("document.querySelector('.hfe-editor__frame').src")));
     $this->getSession()->executeScript('window.hfeAnswer = true;');
     $this->getSession()->getPage()->pressButton('Close');
-    $this->assertSame(2, $this->getSession()->evaluateScript('window.hfeConfirms'));
+    $this->assertSame(3, $this->getSession()->evaluateScript('window.hfeConfirms'));
     $this->assertTrue($this->assertSession()->elementExists('css', '.hfe-editor')->hasAttribute('hidden'));
   }
 

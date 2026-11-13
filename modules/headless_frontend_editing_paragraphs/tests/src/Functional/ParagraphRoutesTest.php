@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\headless_frontend_editing_paragraphs\Functional;
 
 use Drupal\Core\Url;
+use Drupal\headless_frontend_editing_paragraphs_test\Hook\LockedFieldHooks;
 use Drupal\node\NodeInterface;
 use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\paragraphs\ParagraphInterface;
@@ -26,7 +27,12 @@ final class ParagraphRoutesTest extends BrowserTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['node', 'headless_frontend_editing', 'headless_frontend_editing_paragraphs'];
+  protected static $modules = [
+    'node',
+    'headless_frontend_editing',
+    'headless_frontend_editing_paragraphs',
+    'headless_frontend_editing_paragraphs_test',
+  ];
 
   /**
    * {@inheritdoc}
@@ -193,6 +199,24 @@ final class ParagraphRoutesTest extends BrowserTestBase {
         'position' => 'before',
         'bundle' => 'text',
       ]),
+      Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $uuid]),
+    ] as $url) {
+      $this->drupalGet($url);
+      $this->assertSession()->statusCodeEquals(403);
+    }
+    $this->assertSame(403, $this->move('down', TRUE));
+    $this->assertSame(['First', 'Second'], $this->texts());
+  }
+
+  /**
+   * Tests that every route needs edit access to the sections field.
+   */
+  public function testLockedField(): void {
+    \Drupal::state()->set(LockedFieldHooks::STATE, 'field_sections');
+    $this->login();
+    $uuid = $this->first->uuid();
+    foreach ([
+      Url::fromRoute('headless_frontend_editing_paragraphs.add', ['uuid' => $uuid, 'position' => 'before']),
       Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $uuid]),
     ] as $url) {
       $this->drupalGet($url);

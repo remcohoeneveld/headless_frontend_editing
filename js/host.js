@@ -29,6 +29,9 @@
    */
   hfe.actions = hfe.actions || {};
   hfe.actions.edit = (target, lang) => {
+    if (!hfe.confirmDiscard()) {
+      return;
+    }
     hfe.open(
       Drupal.url(
         `headless-frontend-editing/edit/${encodeURIComponent(lang)}/${encodeURIComponent(target)}`,
@@ -144,6 +147,16 @@
       .catch(warn);
   };
 
+  /**
+   * Asks whether unsaved changes in the sidebar may be discarded.
+   *
+   * @return {boolean}
+   *   True when there are none, or the editor agrees to discard them.
+   */
+  hfe.confirmDiscard = () =>
+    // eslint-disable-next-line no-alert
+    !dirty || window.confirm(Drupal.t('Discard unsaved changes?'));
+
   hfe.open = (url) => {
     const frame = editorFrame();
     if (!frame) {
@@ -158,12 +171,7 @@
    * Closes the sidebar, after confirming that unsaved changes may go.
    */
   const close = () => {
-    if (
-      !editor() ||
-      editor().hidden ||
-      // eslint-disable-next-line no-alert
-      (dirty && !window.confirm(Drupal.t('Discard unsaved changes?')))
-    ) {
+    if (!editor() || editor().hidden || !hfe.confirmDiscard()) {
       return;
     }
     editor().hidden = true;

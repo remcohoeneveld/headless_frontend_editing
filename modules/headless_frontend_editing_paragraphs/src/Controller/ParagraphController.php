@@ -115,7 +115,7 @@ final class ParagraphController extends ControllerBase {
   }
 
   /**
-   * Checks update access to the entity the section is on.
+   * Checks update access to the root and edit access to the section fields.
    *
    * Sections are changed in their own language, which is the page's language
    * in that translation. Unknown sections are let through, so the route can
@@ -126,8 +126,8 @@ final class ParagraphController extends ControllerBase {
     if (!$paragraph) {
       return AccessResult::allowed()->setCacheMaxAge(0);
     }
-    $root = $this->tree->root($paragraph);
-    return $root ? $root->access('update', $account, TRUE) : AccessResult::forbidden()->setCacheMaxAge(0);
+    $result = $this->tree->access($paragraph, $account);
+    return $result->isAllowed() ? $result : AccessResult::forbidden()->addCacheableDependency($result);
   }
 
   /**

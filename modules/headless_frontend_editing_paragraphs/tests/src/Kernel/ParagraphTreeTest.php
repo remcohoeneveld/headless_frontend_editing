@@ -165,4 +165,24 @@ final class ParagraphTreeTest extends KernelTestBase {
     $this->assertSame([(int) $a->id(), (int) $b->id()], $this->order($node));
   }
 
+  /**
+   * Tests that a paragraph its parent no longer references is not placed.
+   */
+  public function testUnreferenced(): void {
+    $this->installConfig(['system', 'node', 'headless_frontend_editing']);
+    $this->setUpCurrentUser([], ['access content', 'edit any page content']);
+    [$node, $a, $b] = $this->page();
+    $orphan = Paragraph::create(['type' => 'text']);
+    $orphan->setParentEntity($node, 'field_sections')->save();
+
+    $this->assertNull($this->tree->load($orphan->uuid()));
+    $this->assertNull($this->tree->attach($orphan));
+    $this->assertNull($this->tree->attach(Paragraph::create(['type' => 'text']), [$orphan, 'after']));
+
+    // The sidebar form saves it on its own instead of failing.
+    $form_object = $this->container->get('entity_type.manager')->getFormObject('paragraph', 'headless_editing')->setEntity($orphan);
+    $this->assertSame(SAVED_UPDATED, $form_object->save([], new FormState()));
+    $this->assertSame([(int) $a->id(), (int) $b->id()], $this->order($node));
+  }
+
 }

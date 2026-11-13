@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Drupal\headless_frontend_editing_paragraphs;
 
 use Drupal\Component\Datetime\TimeInterface;
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -33,20 +35,48 @@ final class ParagraphTree {
   ) {}
 
   /**
-   * Loads a paragraph that its parent still references, or returns NULL.
+   * Loads a paragraph that its parents still reference, or returns NULL.
    */
   public function load(string $uuid): ?ParagraphInterface {
     $paragraph = $this->entityRepository->loadEntityByUuid('paragraph', $uuid);
-    if (!$paragraph instanceof ParagraphInterface || !($items = $this->items($paragraph))) {
+    if (!$paragraph instanceof ParagraphInterface) {
       return NULL;
     }
-    try {
-      $this->delta($items, $paragraph);
-    }
-    catch (\LogicException) {
-      return NULL;
+    $entity = $paragraph;
+    while ($entity instanceof ParagraphInterface) {
+      $items = $this->items($entity);
+      if (!$items) {
+        return NULL;
+      }
+      try {
+        $this->delta($items, $entity);
+      }
+      catch (\LogicException) {
+        return NULL;
+      }
+      $entity = $entity->getParentEntity();
     }
     return $paragraph;
+  }
+
+  /**
+   * Checks access to add, move or delete sections next to a paragraph.
+   *
+   * That changes the reference field of every parent up to the root, so it
+   * needs update access to the root and edit access to each of those fields.
+   */
+  public function access(ParagraphInterface $paragraph, AccountInterface $account): AccessResultInterface {
+    $root = $this->root($paragraph);
+    if (!$root) {
+      return AccessResult::forbidden()->setCacheMaxAge(0);
+    }
+    $result = $root->access('update', $account, TRUE);
+    $entity = $paragraph;
+    while ($entity instanceof ParagraphInterface && ($items = $this->items($entity))) {
+      $result = $result->andIf($items->access('edit', $account, TRUE));
+      $entity = $entity->getParentEntity();
+    }
+    return $result;
   }
 
   /**
@@ -84,15 +114,21 @@ final class ParagraphTree {
    *   or 'after'.
    *
    * @return \Drupal\Core\Entity\ContentEntityInterface|null
-   *   The root entity, or NULL if the paragraph has no parent.
+   *   The root entity, or NULL if a parent is missing or no longer
+   *   references the paragraph.
    */
   public function attach(ParagraphInterface $paragraph, ?array $insert = NULL): ?ContentEntityInterface {
     [$anchor, $position] = $insert ?? [$paragraph, NULL];
     $items = $this->items($anchor);
-    if (!$items) {
+    try {
+      $delta = $items ? $this->delta($items, $anchor) : NULL;
+    }
+    catch (\LogicException) {
+      $delta = NULL;
+    }
+    if ($delta === NULL) {
       return NULL;
     }
-    $delta = $this->delta($items, $anchor);
     if ($insert) {
       $values = $items->getValue();
       array_splice($values, $delta + ($position === 'after' ? 1 : 0), 0, [['entity' => $paragraph]]);

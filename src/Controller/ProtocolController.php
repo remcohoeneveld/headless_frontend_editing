@@ -6,14 +6,16 @@ namespace Drupal\headless_frontend_editing\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
+use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\headless_frontend_editing\PreviewToken;
 use Drupal\headless_frontend_editing\TargetResolver;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Serves the describe and token endpoints used by the editing host page.
+ * Serves the editing protocol endpoints and the frontend overlay client.
  */
 final class ProtocolController extends ControllerBase {
 
@@ -26,6 +28,7 @@ final class ProtocolController extends ControllerBase {
     private readonly TargetResolver $resolver,
     private readonly PreviewToken $previewToken,
     private readonly EntityTypeBundleInfoInterface $bundleInfo,
+    private readonly ModuleExtensionList $moduleList,
   ) {}
 
   /**
@@ -36,6 +39,7 @@ final class ProtocolController extends ControllerBase {
       $container->get(TargetResolver::class),
       $container->get(PreviewToken::class),
       $container->get('entity_type.bundle.info'),
+      $container->get('extension.list.module'),
     );
   }
 
@@ -87,6 +91,17 @@ final class ProtocolController extends ControllerBase {
     $response = new JsonResponse(['token' => $this->previewToken->create($this->currentUser())]);
     $response->headers->set('Cache-Control', 'no-store');
     return $response;
+  }
+
+  /**
+   * Serves the overlay client that frontends load in their preview route.
+   */
+  public function client(): Response {
+    $path = $this->moduleList->getPath('headless_frontend_editing') . '/js/client.js';
+    return new Response((string) file_get_contents($path), 200, [
+      'Content-Type' => 'text/javascript; charset=utf-8',
+      'Cache-Control' => 'public, max-age=86400',
+    ]);
   }
 
 }

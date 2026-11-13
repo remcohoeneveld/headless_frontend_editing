@@ -1,0 +1,8 @@
+headless_frontend_editing_test.frontend:
+  path: '/hfe-test/frontend'
+  defaults:
+    _controller: '\Drupal\headless_frontend_editing_test\Controller\FrontendController::page'
+  requirements:
+    _permission: 'access content'
+  options:
+    no_cache: true

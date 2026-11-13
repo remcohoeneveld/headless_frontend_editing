@@ -49,3 +49,12 @@ headless_frontend_editing.saved:
   options:
     _admin_route: true
     no_cache: true
+
+headless_frontend_editing.client:
+  path: '/headless-frontend-editing/client.js'
+  defaults:
+    _controller: '\Drupal\headless_frontend_editing\Controller\ProtocolController::client'
+  methods: [GET]
+  requirements:
+    # Frontends load the overlay client before any Drupal session exists.
+    _access: 'TRUE'

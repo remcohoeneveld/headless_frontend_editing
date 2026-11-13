@@ -1,0 +1,6 @@
+name: 'Headless Frontend Editing test frontend'
+type: module
+description: 'Serves a minimal decoupled frontend from Drupal for browser tests.'
+package: Testing
+hidden: true
+core_version_requirement: ^11.4 || ^12

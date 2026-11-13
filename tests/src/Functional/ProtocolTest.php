@@ -38,6 +38,17 @@ final class ProtocolTest extends BrowserTestBase {
   }
 
   /**
+   * Tests that anyone can load the client script, cached for a day.
+   */
+  public function testClientScript(): void {
+    $this->drupalGet('headless-frontend-editing/client.js');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->responseHeaderEquals('Content-Type', 'text/javascript; charset=utf-8');
+    $this->assertSession()->responseHeaderEquals('Cache-Control', 'max-age=86400, public');
+    $this->assertSession()->responseContains("'hfe:ready'");
+  }
+
+  /**
    * Tests that anonymous users get no token.
    */
   public function testTokenAnonymous(): void {

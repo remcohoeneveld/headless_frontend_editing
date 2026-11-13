@@ -1,4 +1,6 @@
 decoupled
 headless
+nextjs
 revalidate
+revalidated
 revalidation

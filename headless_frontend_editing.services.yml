@@ -21,3 +21,6 @@ services:
     tags:
       - { name: page_cache_request_policy }
       - { name: dynamic_page_cache_request_policy }
+  Drupal\headless_frontend_editing\Routing\RouteSubscriber:
+    tags:
+      - { name: event_subscriber }

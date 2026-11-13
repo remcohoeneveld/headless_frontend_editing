@@ -1,0 +1,26 @@
+.hfe-preview-page .hfe-preview {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 8rem);
+  border: 0;
+}
+
+.hfe-panel__body[hidden],
+.hfe-editor[hidden] {
+  display: none;
+}
+
+.hfe-editor {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: min(32rem, 100vw);
+  background: #fff;
+  box-shadow: 0 0 1rem rgba(0, 0, 0, 0.3);
+}
+
+.hfe-editor__frame {
+  inline-size: 100%;
+  block-size: calc(100% - 2.5rem);
+  border: 0;
+}

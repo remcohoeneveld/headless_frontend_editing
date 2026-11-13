@@ -1,0 +1,11 @@
+host:
+  version: VERSION
+  js:
+    js/host.js: {}
+  css:
+    theme:
+      css/host.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/once

@@ -72,4 +72,23 @@ final class SettingsForm extends ConfigFormBase {
     return parent::buildForm($form, $form_state);
   }
 
+  /**
+   * {@inheritdoc}
+   *
+   * @param array<mixed> $form
+   *   The form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state): void {
+    parent::validateForm($form, $form_state);
+    // The paths are appended to the frontend URL, so they need a leading slash.
+    foreach (['preview_path' => FALSE, 'revalidate_path' => TRUE] as $key => $may_be_empty) {
+      $value = (string) $form_state->getValue($key);
+      if (!($may_be_empty && $value === '') && !str_starts_with($value, '/')) {
+        $form_state->setErrorByName($key, $this->t('The path must start with a slash.'));
+      }
+    }
+  }
+
 }

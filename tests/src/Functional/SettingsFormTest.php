@@ -42,7 +42,12 @@ final class SettingsFormTest extends BrowserTestBase {
     $this->submitForm(['frontend_url' => 'not a url'], 'Save configuration');
     $this->assertSession()->pageTextContains('The URL not a url is not valid.');
 
-    $this->submitForm(['frontend_url' => 'https://front.example'], 'Save configuration');
+    $this->submitForm(['preview_path' => 'drupal-preview'], 'Save configuration');
+    $this->assertSession()->pageTextContains('The path must start with a slash.');
+    $this->submitForm(['preview_path' => '/drupal-preview', 'revalidate_path' => 'api/revalidate'], 'Save configuration');
+    $this->assertSession()->pageTextContains('The path must start with a slash.');
+
+    $this->submitForm(['frontend_url' => 'https://front.example', 'revalidate_path' => ''], 'Save configuration');
     $this->assertSession()->pageTextContains('The configuration options have been saved.');
     $this->assertSame('https://front.example', $this->config('headless_frontend_editing.settings')->get('frontend_url'));
   }

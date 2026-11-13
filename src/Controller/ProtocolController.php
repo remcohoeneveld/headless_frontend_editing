@@ -95,13 +95,18 @@ final class ProtocolController extends ControllerBase {
 
   /**
    * Serves the overlay client that frontends load in their preview route.
+   *
+   * Cached briefly and revalidated by ETag, so updates reach editors soon
+   * without frontends adding a version to the URL.
    */
-  public function client(): Response {
-    $path = $this->moduleList->getPath('headless_frontend_editing') . '/js/client.js';
-    return new Response((string) file_get_contents($path), 200, [
-      'Content-Type' => 'text/javascript; charset=utf-8',
-      'Cache-Control' => 'public, max-age=86400',
-    ]);
+  public function client(Request $request): Response {
+    $script = (string) file_get_contents($this->moduleList->getPath('headless_frontend_editing') . '/js/client.js');
+    $response = new Response($script, 200, ['Content-Type' => 'text/javascript; charset=utf-8']);
+    $response->setEtag(hash('sha256', $script));
+    $response->setPublic();
+    $response->setMaxAge(300);
+    $response->isNotModified($request);
+    return $response;
   }
 
 }

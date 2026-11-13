@@ -38,14 +38,25 @@ final class ProtocolTest extends BrowserTestBase {
   }
 
   /**
-   * Tests that anyone can load the client script, cached for a day.
+   * Tests that anyone can load the client script, revalidated by ETag.
    */
   public function testClientScript(): void {
     $this->drupalGet('headless-frontend-editing/client.js');
     $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->responseHeaderEquals('Content-Type', 'text/javascript; charset=utf-8');
-    $this->assertSession()->responseHeaderEquals('Cache-Control', 'max-age=86400, public');
+    $this->assertSession()->responseHeaderEquals('Cache-Control', 'max-age=300, public');
     $this->assertSession()->responseContains("'hfe:ready'");
+    $etag = $this->getSession()->getResponseHeader('ETag');
+    $this->assertNotEmpty($etag);
+
+    $this->getSession()->setRequestHeader('If-None-Match', $etag);
+    $this->drupalGet('headless-frontend-editing/client.js');
+    $this->assertSession()->statusCodeEquals(304);
+    $this->assertSame('', $this->getSession()->getPage()->getContent());
+
+    $this->getSession()->setRequestHeader('If-None-Match', '"stale"');
+    $this->drupalGet('headless-frontend-editing/client.js');
+    $this->assertSession()->statusCodeEquals(200);
   }
 
   /**

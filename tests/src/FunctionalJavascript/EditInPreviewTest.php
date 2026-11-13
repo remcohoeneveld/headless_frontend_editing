@@ -88,6 +88,38 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $this->hoverTitle();
     $toolbar = $this->getSession()->evaluateScript("[...document.querySelector('[data-hfe-overlay]').shadowRoot.querySelector('.toolbar').children].map((el) => el.textContent)");
     $this->assertSame(['Title', 'Edit Title'], $toolbar);
+
+    // Alt+Enter on focused content in a target moves focus to its toolbar.
+    $this->getSession()->executeScript("const h1 = document.querySelector('h1'); h1.tabIndex = 0; h1.focus(); h1.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', altKey: true, bubbles: true}));");
+    $this->assertSame('Edit Title', $this->getSession()->evaluateScript("document.querySelector('[data-hfe-overlay]').shadowRoot.activeElement?.textContent"));
+    $this->assertFalse($this->getSession()->evaluateScript("document.querySelector('[data-hfe-overlay]').shadowRoot.querySelector('.toolbar').hidden"));
+  }
+
+  /**
+   * Tests Escape inside the sidebar, and the unsaved changes confirmation.
+   */
+  public function testEscapeInSidebarCloses(): void {
+    $escape = "document.querySelector('input[name=\"title[0][value]\"]').dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))";
+    $this->hoverTitle();
+    $this->getSession()->executeScript("document.querySelector('[data-hfe-overlay]').shadowRoot.querySelector('button').click()");
+    $this->enterFrame('hfe-editor__frame');
+    $this->assertSession()->waitForField('title[0][value]');
+    $this->getSession()->executeScript($escape);
+    $this->getSession()->switchToIFrame();
+    $this->assertTrue($this->assertSession()->elementExists('css', '.hfe-editor')->hasAttribute('hidden'));
+
+    // With a change, Escape asks first; declining keeps the sidebar open.
+    $this->getSession()->executeScript("window.hfeConfirms = 0; window.confirm = () => { window.hfeConfirms++; return window.hfeAnswer; }; window.hfeAnswer = false; Drupal.headlessFrontendEditing.actions.edit('node:{$this->node->uuid()}:title', 'en');");
+    $this->enterFrame('hfe-editor__frame');
+    $this->assertSession()->waitForField('title[0][value]')->setValue('Changed');
+    $this->getSession()->executeScript($escape);
+    $this->getSession()->switchToIFrame();
+    $this->assertSame(1, $this->getSession()->evaluateScript('window.hfeConfirms'));
+    $this->assertFalse($this->assertSession()->elementExists('css', '.hfe-editor')->hasAttribute('hidden'));
+    $this->getSession()->executeScript('window.hfeAnswer = true;');
+    $this->getSession()->getPage()->pressButton('Close');
+    $this->assertSame(2, $this->getSession()->evaluateScript('window.hfeConfirms'));
+    $this->assertTrue($this->assertSession()->elementExists('css', '.hfe-editor')->hasAttribute('hidden'));
   }
 
   /**
@@ -131,6 +163,7 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $this->getSession()->switchToIFrame();
     $this->assertTrue($this->getSession()->wait(5000, "document.querySelector('.hfe-preview').contentDocument.querySelector('h1')?.textContent === 'Unsaved title'"));
 
+    $this->getSession()->executeScript('window.confirm = () => true;');
     $this->getSession()->getPage()->pressButton('Close');
     $this->assertTrue($this->assertSession()->elementExists('css', '.hfe-editor')->hasAttribute('hidden'));
     $this->assertTrue($this->getSession()->wait(5000, "document.querySelector('.hfe-preview').contentDocument.querySelector('h1')?.textContent === 'Original'"));
@@ -180,6 +213,18 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $this->assertSame($url, $this->getSession()->getCurrentUrl());
     $this->assertTrue($this->getSession()->evaluateScript('window.hfeMarker === true'));
     $this->assertTrue($this->assertSession()->elementExists('css', '.hfe-editor')->hasAttribute('hidden'));
+  }
+
+  /**
+   * Tests that the client repeats hfe:ready while nobody answers.
+   */
+  public function testReadyRepeatedUntilDescribed(): void {
+    $path = '/node/' . $this->node->id();
+    $this->drupalGet('hfe-test/frontend', ['query' => ['path' => $path]]);
+    $src = $this->buildUrl('hfe-test/frontend', ['query' => ['path' => $path, 'edit' => 1]]);
+    // A parent that never answers, like a host page that is still loading.
+    $this->getSession()->executeScript("window.hfeReady = 0; window.addEventListener('message', (e) => { if (e.data?.type === 'hfe:ready') window.hfeReady++; }); const f = document.createElement('iframe'); f.src = '$src'; document.body.append(f);");
+    $this->assertTrue($this->getSession()->wait(5000, 'window.hfeReady >= 3'));
   }
 
   /**

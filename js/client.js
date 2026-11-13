@@ -52,6 +52,10 @@
   const descriptions = new Map();
   let current = null;
   let announced = '';
+  let described = false;
+  // Retry delays for hfe:ready until Drupal first answers: the host page may
+  // not be listening yet when this frame starts.
+  const RETRIES = [500, 1000, 2000, 4000, 8000];
 
   const post = (message) => {
     window.parent.postMessage({ v: 1, ...message }, drupalOrigin);
@@ -86,8 +90,11 @@
 
   /**
    * Asks Drupal to describe the targets, when the set has changed.
+   *
+   * @param {boolean} force
+   *   Whether to send even if the set is unchanged.
    */
-  const announce = () => {
+  const announce = (force = false) => {
     const keys = [
       ...new Set(
         [...document.querySelectorAll('[data-hfe]')]
@@ -95,7 +102,7 @@
           .map(keyOf),
       ),
     ];
-    if (keys.join(',') === announced) {
+    if (!force && keys.join(',') === announced) {
       return;
     }
     announced = keys.join(',');
@@ -121,6 +128,7 @@
     const toolbar = document.createElement('div');
     toolbar.className = 'toolbar';
     toolbar.setAttribute('role', 'toolbar');
+    toolbar.setAttribute('aria-keyshortcuts', 'Alt+Enter');
     outline.hidden = true;
     toolbar.hidden = true;
     shadow.append(style, outline, toolbar);
@@ -174,8 +182,9 @@
     };
 
     const point = (event) => {
-      // Events from inside the toolbar report its host as target: keep it open.
-      if (event.target === host) {
+      // Events from inside the toolbar report its host as target, and focus
+      // in the toolbar keeps it open.
+      if (event.target === host || shadow.activeElement) {
         return;
       }
       const element = describedAt(event.target);
@@ -185,7 +194,30 @@
     };
     document.addEventListener('mouseover', point);
     document.addEventListener('focusin', point);
-    document.documentElement.addEventListener('mouseleave', () => show(null));
+    document.documentElement.addEventListener('mouseleave', () => {
+      if (!shadow.activeElement) {
+        show(null);
+      }
+    });
+    // Alt+Enter in a target, or in anything focusable inside one, moves focus
+    // to that target's toolbar.
+    document.addEventListener('keydown', (event) => {
+      const element =
+        event.altKey && event.key === 'Enter'
+          ? describedAt(document.activeElement)
+          : null;
+      if (!element) {
+        return;
+      }
+      if (element !== current) {
+        show(element);
+      }
+      const button = toolbar.querySelector('button:not(:disabled)');
+      if (button) {
+        event.preventDefault();
+        button.focus();
+      }
+    });
     window.addEventListener('scroll', place, { capture: true, passive: true });
     window.addEventListener('resize', place);
     new MutationObserver(() => {
@@ -242,6 +274,7 @@
         return;
       }
       if (data.type === 'hfe:describe' && Array.isArray(data.targets)) {
+        described = true;
         data.targets.forEach((target) => {
           if (
             target &&
@@ -274,6 +307,18 @@
     });
 
     announce();
+    const retry = (attempt) => {
+      if (described || attempt >= RETRIES.length) {
+        return;
+      }
+      setTimeout(() => {
+        if (!described) {
+          announce(true);
+          retry(attempt + 1);
+        }
+      }, RETRIES[attempt]);
+    };
+    retry(0);
   };
 
   if (document.readyState === 'loading') {

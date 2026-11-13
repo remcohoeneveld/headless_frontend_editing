@@ -3,6 +3,12 @@ services:
   _defaults:
     autowire: true
   Drupal\headless_frontend_editing\PreviewToken: {}
+  Drupal\headless_frontend_editing\Revalidator:
+    tags:
+      - { name: needs_destruction }
+  logger.channel.headless_frontend_editing:
+    parent: logger.channel_base
+    arguments: [headless_frontend_editing]
   Drupal\headless_frontend_editing\Authentication\PreviewTokenAuth:
     tags:
       # Not global: only routes whose _auth lists it (JSON:API, GraphQL).

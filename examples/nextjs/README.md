@@ -14,3 +14,5 @@ Set `DRUPAL_URL` (public Drupal URL), `DRUPAL_GRAPHQL_URL` and
 Add these headers for `/drupal-preview` in `next.config`:
 `Content-Security-Policy: frame-ancestors <drupal-origin>` and
 `Referrer-Policy: no-referrer`.
+
+This is an uncompiled sketch; its GraphQL query assumes `graphql_compose_routes`.

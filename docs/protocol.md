@@ -11,7 +11,7 @@ iframe and talks to `client.js` in it with `postMessage`. Every message has
 | frontend to Drupal | `hfe:navigate` | `{path}`, only `^/(?!/)` |
 | Drupal to frontend | `hfe:describe` | `{targets: [{id, lang, label, actions: [{id, label, disabled}]}]}` |
 | Drupal to frontend | `hfe:show` | `{path, token}` |
-| sidebar to host (same origin) | `hfe:live` | `{path}`, only `^/node/preview/[\w-]+/full$` |
+| sidebar to host (same origin) | `hfe:live` | `{path}`, only `^/(?:[a-z]{2,3}(?:-[a-z0-9]+)?/)?node/preview/[\w-]+/full$` (language prefix allowed) |
 | sidebar to host (same origin) | `hfe:saved` | `{}` |
 
 `client.js` sends `hfe:ready` once targets exist and again when new ones appear

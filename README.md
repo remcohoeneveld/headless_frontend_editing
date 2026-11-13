@@ -41,7 +41,8 @@ Install with Composer and enable the module:
    - Preview path (default `/drupal-preview`) and revalidate path (default
      `/api/revalidate`, must start with a slash; empty turns revalidation off).
    - Form mode used for editing (default `headless_editing`, falls back to `default`).
-   - Content types that use the frontend view (`bundles` in config; empty means all).
+   - Content types that use the frontend view: config `bundles` is a map keyed by
+     entity type, for example `bundles: { node: [article, page] }`; empty means all.
    - Entity types that trigger revalidation.
 3. Set the shared revalidation secret in `settings.php`:
 

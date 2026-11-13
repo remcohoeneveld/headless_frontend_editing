@@ -47,7 +47,7 @@ final class EditController extends ControllerBase {
    */
   public function edit(string $langcode, string $target): array {
     $resolved = $this->resolver->resolve($target, $langcode) ?? throw new NotFoundHttpException();
-    $this->fieldFocus->set($resolved->fieldName);
+    $this->fieldFocus->set($resolved->entity->getEntityTypeId(), $resolved->entity->bundle(), $resolved->fieldName);
     return $this->entityFormBuilder()->getForm($resolved->entity, EntityFormHooks::OPERATION, [
       'hfe' => TRUE,
       'hfe_target' => $resolved->id(),

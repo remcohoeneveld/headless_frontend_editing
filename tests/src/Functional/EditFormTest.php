@@ -120,6 +120,27 @@ final class EditFormTest extends BrowserTestBase {
   }
 
   /**
+   * Hidden metadata keeps its values, also inside grouped widget elements.
+   */
+  public function testHiddenMetadataKept(): void {
+    $this->node->setPromoted(TRUE)->setSticky(TRUE)->save();
+    $this->loginEditor(['edit any article content', 'administer nodes']);
+    foreach (['', ':title'] as $field) {
+      \Drupal::state()->delete('hfe_test_flag');
+      $this->drupalGet('headless-frontend-editing/edit/en/node:' . $this->node->uuid() . $field);
+      $this->assertSession()->fieldNotExists('sticky[value]');
+      $this->assertSession()->fieldNotExists('title[0][hfe_test_flag]');
+      $this->submitForm(['title[0][value]' => "Saved$field"], 'Save');
+      $node = $this->storage()->load($this->node->id());
+      $this->assertSame("Saved$field", $node->getTitle());
+      $this->assertTrue($node->isPromoted());
+      $this->assertTrue($node->isSticky());
+      \Drupal::state()->resetCache();
+      $this->assertSame(1, \Drupal::state()->get('hfe_test_flag'));
+    }
+  }
+
+  /**
    * Only the translation in the target's language changes.
    */
   public function testTranslation(): void {

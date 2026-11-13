@@ -10,22 +10,24 @@ namespace Drupal\headless_frontend_editing;
 final class FieldFocus {
 
   /**
-   * The focused field, or NULL for the whole entity.
+   * The focused entity type, bundle and field, or NULL.
+   *
+   * @var array{string, string, string}|null
    */
-  private ?string $fieldName = NULL;
+  private ?array $focus = NULL;
 
   /**
-   * Limits the editing form to one field; NULL for the whole entity.
+   * Limits the editing form of a bundle to one field; NULL for all fields.
    */
-  public function set(?string $field_name): void {
-    $this->fieldName = $field_name;
+  public function set(string $entity_type_id, string $bundle, ?string $field_name): void {
+    $this->focus = $field_name === NULL ? NULL : [$entity_type_id, $bundle, $field_name];
   }
 
   /**
-   * Returns the focused field, or NULL for the whole entity.
+   * Returns the focused field of a bundle, or NULL for all fields.
    */
-  public function get(): ?string {
-    return $this->fieldName;
+  public function get(string $entity_type_id, string $bundle): ?string {
+    return $this->focus !== NULL && $this->focus[0] === $entity_type_id && $this->focus[1] === $bundle ? $this->focus[2] : NULL;
   }
 
 }

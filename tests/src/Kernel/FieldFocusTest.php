@@ -61,7 +61,7 @@ final class FieldFocusTest extends KernelTestBase {
   public function testOnlyFocusedField(): void {
     $node = Node::create(['type' => 'article', 'title' => 'Hello']);
     $node->save();
-    $this->container->get(FieldFocus::class)->set('field_intro');
+    $this->container->get(FieldFocus::class)->set('node', 'article', 'field_intro');
     $form = $this->container->get('entity.form_builder')->getForm($node, 'headless_editing', ['hfe' => TRUE]);
     $this->assertArrayHasKey('widget', $form['field_intro']);
     $this->assertArrayNotHasKey('body', $form);
@@ -76,11 +76,26 @@ final class FieldFocusTest extends KernelTestBase {
     $this->addEntityTypeAndBundleToWorkflow($workflow, 'node', 'article');
     $node = Node::create(['type' => 'article', 'title' => 'Hello']);
     $node->save();
-    $this->container->get(FieldFocus::class)->set('field_intro');
+    $this->container->get(FieldFocus::class)->set('node', 'article', 'field_intro');
     $components = EntityFormDisplay::collectRenderDisplay($node, 'headless_editing')->getComponents();
     $this->assertArrayHasKey('field_intro', $components);
     $this->assertArrayHasKey('moderation_state', $components);
     $this->assertArrayNotHasKey('body', $components);
+  }
+
+  /**
+   * Focus leaves displays of other bundles alone, even in the same mode.
+   */
+  public function testOtherBundleUntouched(): void {
+    $this->config('headless_frontend_editing.settings')->set('form_mode', 'default')->save();
+    NodeType::create(['type' => 'page', 'name' => 'Page'])->save();
+    FieldConfig::create(['field_name' => 'body', 'entity_type' => 'node', 'bundle' => 'page'])->save();
+    $this->container->get('entity_display.repository')->getFormDisplay('node', 'page')->setComponent('body')->save();
+    $this->container->get(FieldFocus::class)->set('node', 'article', 'field_intro');
+    $page = Node::create(['type' => 'page', 'title' => 'Other']);
+    $this->assertArrayHasKey('body', EntityFormDisplay::collectRenderDisplay($page, 'default')->getComponents());
+    $article = Node::create(['type' => 'article', 'title' => 'Focused']);
+    $this->assertSame(['field_intro'], array_keys(EntityFormDisplay::collectRenderDisplay($article, 'default')->getComponents()));
   }
 
 }

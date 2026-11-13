@@ -38,6 +38,8 @@
         };
         form.addEventListener('input', schedule);
         form.addEventListener('change', schedule);
+        // CKEditor 5 only reports changes through this jQuery event.
+        $(form).on('formUpdated', schedule);
       });
       once('hfe-saved', '.hfe-saved', context).forEach(() => {
         notify({ type: 'hfe:saved' });

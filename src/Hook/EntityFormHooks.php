@@ -78,7 +78,7 @@ final class EntityFormHooks {
    */
   #[Hook('entity_form_display_alter')]
   public function formDisplayAlter(EntityFormDisplayInterface $form_display, array $context): void {
-    $field_name = $this->fieldFocus->get();
+    $field_name = $this->fieldFocus->get($context['entity_type'], $context['bundle']);
     if ($field_name === NULL || $context['form_mode'] !== $this->formMode()) {
       return;
     }
@@ -127,22 +127,42 @@ final class EntityFormHooks {
 
     $form_object = $form_state->getFormObject();
     if ($form_object instanceof EntityFormInterface && $form_object->getEntity()->getEntityTypeId() === 'node') {
-      // Hide the node metadata. Elements are hidden one by one, not through
-      // their group: a widget left accessible but not rendered would submit
-      // empty, which unchecks checkboxes such as promote.
+      // Hide the node metadata, element by element: widgets put their own
+      // nested elements in groups (the path widget does), and an element in a
+      // hidden group would otherwise show up loose in the form.
       $hidden = ['advanced' => TRUE, 'meta' => TRUE, 'revision_information' => TRUE, 'revision_log' => TRUE];
       do {
         $count = count($hidden);
-        foreach (Element::children($form) as $key) {
-          if (isset($form[$key]['#group']) && isset($hidden[$form[$key]['#group']])) {
-            $hidden[$key] = TRUE;
-          }
-        }
+        self::hideGrouped($form, $hidden, TRUE);
       } while (count($hidden) > $count);
       foreach (array_keys($hidden) as $key) {
         if (isset($form[$key])) {
           $form[$key]['#access'] = FALSE;
         }
+      }
+    }
+  }
+
+  /**
+   * Hides the elements, at any depth, whose group is hidden.
+   *
+   * @param array<mixed> $element
+   *   The form or a part of it.
+   * @param array<true> $hidden
+   *   The hidden groups; top-level elements hidden become groups too.
+   * @param bool $top
+   *   Whether $element is the form itself.
+   */
+  private static function hideGrouped(array &$element, array &$hidden, bool $top): void {
+    foreach (Element::children($element) as $key) {
+      if (isset($element[$key]['#group']) && isset($hidden[$element[$key]['#group']])) {
+        $element[$key]['#access'] = FALSE;
+        if ($top) {
+          $hidden[$key] = TRUE;
+        }
+      }
+      elseif (is_array($element[$key])) {
+        self::hideGrouped($element[$key], $hidden, FALSE);
       }
     }
   }

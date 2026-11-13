@@ -15,7 +15,7 @@ use Drupal\Core\Site\Settings;
  *
  * Token format: {uid}.{expires}.{hmac}.
  */
-class PreviewToken {
+final class PreviewToken {
 
   /**
    * Token lifetime in seconds.
@@ -23,8 +23,8 @@ class PreviewToken {
   public const TTL = 600;
 
   public function __construct(
-    protected PrivateKey $privateKey,
-    protected TimeInterface $time,
+    private PrivateKey $privateKey,
+    private TimeInterface $time,
   ) {}
 
   /**
@@ -53,7 +53,7 @@ class PreviewToken {
   /**
    * Signs a payload with the site private key and hash salt.
    */
-  protected function sign(string $payload): string {
+  private function sign(string $payload): string {
     return Crypt::hmacBase64($payload, $this->privateKey->get() . Settings::getHashSalt());
   }
 

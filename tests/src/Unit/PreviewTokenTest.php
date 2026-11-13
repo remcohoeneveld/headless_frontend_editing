@@ -59,7 +59,9 @@ class PreviewTokenTest extends UnitTestCase {
   public function testExpired(): void {
     $token = $this->token();
     $value = $token->create($this->account(7));
-    $this->now += PreviewToken::TTL + 1;
+    $this->now += PreviewToken::TTL;
+    $this->assertSame(7, $token->validate($value));
+    $this->now += 1;
     $this->assertNull($token->validate($value));
   }
 

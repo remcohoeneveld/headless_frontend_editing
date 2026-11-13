@@ -7,3 +7,11 @@ services:
     tags:
       # Not global: only routes whose _auth lists it (JSON:API, GraphQL).
       - { name: authentication_provider, provider_id: headless_frontend_editing_preview, priority: 100 }
+  Drupal\headless_frontend_editing\EventSubscriber\PreviewTokenReadOnlySubscriber:
+    tags:
+      - { name: event_subscriber }
+  Drupal\headless_frontend_editing\PageCache\DisallowPreviewTokenRequests:
+    public: false
+    tags:
+      - { name: page_cache_request_policy }
+      - { name: dynamic_page_cache_request_policy }

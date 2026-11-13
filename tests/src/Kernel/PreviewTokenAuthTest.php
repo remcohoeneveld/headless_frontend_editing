@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\headless_frontend_editing\Kernel;
 
+use Drupal\Core\DependencyInjection\ContainerBuilder;
+use Drupal\Core\PageCache\ChainRequestPolicy;
+use Drupal\Core\PageCache\RequestPolicy\NoSessionOpen;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\graphql\Entity\Server;
 use Drupal\headless_frontend_editing\Authentication\PreviewTokenAuth;
@@ -16,6 +19,7 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\UserInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -43,6 +47,7 @@ final class PreviewTokenAuthTest extends KernelTestBase {
     'jsonapi',
     'typed_data',
     'graphql',
+    'page_cache',
     'headless_frontend_editing',
   ];
 
@@ -59,6 +64,21 @@ final class PreviewTokenAuthTest extends KernelTestBase {
   /**
    * {@inheritdoc}
    */
+  public function register(ContainerBuilder $container): void {
+    parent::register($container);
+    // The default policy refuses to cache on the command line: use the tagged
+    // policies plus core's session check, as on a web server.
+    $container->getDefinition('page_cache_request_policy')
+      ->setClass(ChainRequestPolicy::class)
+      ->setArguments([]);
+    $container->register('test.page_cache_no_session', NoSessionOpen::class)
+      ->addArgument(new Reference('session_configuration'))
+      ->addTag('page_cache_request_policy');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
@@ -66,6 +86,7 @@ final class PreviewTokenAuthTest extends KernelTestBase {
     $this->installSchema('node', ['node_access']);
     $this->installConfig(['system', 'user', 'node', 'filter']);
     $this->config('jsonapi.settings')->set('read_only', FALSE)->save();
+    $this->config('system.performance')->set('cache.page.max_age', 300)->save();
 
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
     Server::create([
@@ -79,7 +100,11 @@ final class PreviewTokenAuthTest extends KernelTestBase {
 
     // Keep the editor off uid 1.
     $this->createUser();
-    $this->editor = $this->createUser(['access content', 'bypass node access']);
+    $this->editor = $this->createUser([
+      'access content',
+      'bypass node access',
+      'execute preview arbitrary graphql requests',
+    ]);
     $this->node = Node::create([
       'type' => 'article',
       'title' => 'Draft',
@@ -146,6 +171,46 @@ final class PreviewTokenAuthTest extends KernelTestBase {
   }
 
   /**
+   * Bodies that hide a mutation from the pre-routing check are refused.
+   */
+  public function testGraphqlBypassBodiesRefused(): void {
+    $token = $this->token($this->editor);
+    $query = $this->request('POST', '/graphql', $token, '{"query":"{ __typename }"}', 'application/json');
+    $this->assertNotSame(Response::HTTP_FORBIDDEN, $query->getStatusCode());
+
+    // graphql-php lowercases keys, the last one wins.
+    $body = '{"query":"{ __typename }","QUERY":"mutation { doIt }"}';
+    $response = $this->request('POST', '/graphql', $token, $body, 'application/json');
+    $this->assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
+    $response = $this->request('POST', '/graphql', $token, "[$body]", 'application/json');
+    $this->assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
+
+    // The graphql module merges form fields into a JSON body.
+    $body = '{"query":"{ __typename }","x":"&query=mutation{ doIt }&"}';
+    parse_str($body, $post);
+    $response = $this->request('POST', '/graphql', $token, $body, 'application/x-www-form-urlencoded; x=multipart/form-data', ['Apollo-Require-Preflight' => '1'], $post);
+    $this->assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
+
+    // A persisted query id is refused even next to a document.
+    $response = $this->request('POST', '/graphql', $token, '{"query":"{ __typename }","id":"abc"}', 'application/json');
+    $this->assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
+  }
+
+  /**
+   * A token response is neither page cached nor publicly cacheable.
+   */
+  public function testPageCache(): void {
+    $response = $this->request('GET', $this->jsonApiPath(), $this->token($this->editor));
+    $this->assertSame(Response::HTTP_OK, $response->getStatusCode());
+    $this->assertStringContainsString('private', (string) $response->headers->get('Cache-Control'));
+    $this->assertStringContainsString('no-cache', (string) $response->headers->get('Cache-Control'));
+
+    $response = $this->request('GET', $this->jsonApiPath());
+    $this->assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
+    $this->assertStringNotContainsString('Draft', (string) $response->getContent());
+  }
+
+  /**
    * A token for a blocked user is anonymous.
    */
   public function testInactiveUser(): void {
@@ -181,11 +246,27 @@ final class PreviewTokenAuthTest extends KernelTestBase {
 
   /**
    * Sends a request through the HTTP kernel as an anonymous visitor.
+   *
+   * @param string $method
+   *   The HTTP method.
+   * @param string $path
+   *   The path.
+   * @param string|null $token
+   *   A preview token to send, if any.
+   * @param string|null $body
+   *   The request body.
+   * @param string|null $content_type
+   *   The Content-Type header.
+   * @param array<string, string> $headers
+   *   Extra request headers.
+   * @param array<string, mixed> $post
+   *   Form fields, as PHP would parse them from the body.
    */
-  private function request(string $method, string $path, ?string $token = NULL, ?string $body = NULL, ?string $content_type = NULL): Response {
+  private function request(string $method, string $path, ?string $token = NULL, ?string $body = NULL, ?string $content_type = NULL, array $headers = [], array $post = []): Response {
     $this->container->get('current_user')->setAccount(new AnonymousUserSession());
     $server = $content_type ? ['CONTENT_TYPE' => $content_type] : [];
-    $request = Request::create($path, $method, [], [], [], $server, $body);
+    $request = Request::create($path, $method, $post, [], [], $server, $body);
+    $request->headers->add($headers);
     if ($token !== NULL) {
       $request->headers->set(PreviewTokenAuth::HEADER, $token);
     }

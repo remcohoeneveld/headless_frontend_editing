@@ -20,7 +20,8 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * Authentication runs before routing, so requests are classified by method
  * and by the configured GraphQL server endpoints. Anything that could write
- * stays anonymous.
+ * stays anonymous. This is a first gate only: GraphQL operations are checked
+ * again after routing by PreviewTokenReadOnlySubscriber.
  */
 final class PreviewTokenAuth implements AuthenticationProviderInterface {
 
@@ -28,6 +29,11 @@ final class PreviewTokenAuth implements AuthenticationProviderInterface {
    * The request header that carries the preview token.
    */
   public const HEADER = 'X-HFE-Preview-Token';
+
+  /**
+   * The authentication provider id.
+   */
+  public const PROVIDER_ID = 'headless_frontend_editing_preview';
 
   public function __construct(
     private PreviewToken $previewToken,
@@ -57,11 +63,19 @@ final class PreviewTokenAuth implements AuthenticationProviderInterface {
       return NULL;
     }
     $user = $this->entityTypeManager->getStorage('user')->load($uid);
-    return $user instanceof UserInterface && $user->isActive() ? $user : NULL;
+    if (!$user instanceof UserInterface || !$user->isActive()) {
+      return NULL;
+    }
+    // Core does not record the provider; the post-routing check needs it.
+    $request->attributes->set('_authentication_provider', self::PROVIDER_ID);
+    return $user;
   }
 
   /**
    * Whether the request path is the endpoint of a GraphQL server.
+   *
+   * Path variants (a language prefix, a trailing slash) do not match, which
+   * fails closed: such requests are only authenticated for GET and HEAD.
    */
   private function isGraphqlEndpoint(Request $request): bool {
     $names = $this->configFactory->listAll('graphql.graphql_servers.');

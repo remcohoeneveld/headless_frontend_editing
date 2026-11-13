@@ -1,0 +1,7 @@
+headless_frontend_editing.settings:
+  path: '/admin/config/services/headless-frontend-editing'
+  defaults:
+    _form: '\Drupal\headless_frontend_editing\Form\SettingsForm'
+    _title: 'Headless frontend editing'
+  requirements:
+    _permission: 'administer headless frontend editing'

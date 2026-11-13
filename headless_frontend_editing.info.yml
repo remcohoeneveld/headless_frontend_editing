@@ -1,0 +1,6 @@
+name: Headless Frontend Editing
+type: module
+description: 'In-place editing for decoupled (headless) frontends.'
+package: Web services
+core_version_requirement: ^11.4 || ^12
+configure: headless_frontend_editing.settings

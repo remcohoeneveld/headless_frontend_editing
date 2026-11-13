@@ -1,0 +1,14 @@
+{
+  "name": "drupal/headless_frontend_editing",
+  "description": "In-place editing for decoupled (headless) frontends.",
+  "type": "drupal-module",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.3",
+    "drupal/core": "^11.4 || ^12"
+  },
+  "require-dev": {
+    "drupal/graphql": "^4.0",
+    "drupal/paragraphs": "^1.0"
+  }
+}

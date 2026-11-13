@@ -1,0 +1,7 @@
+use headless frontend editing:
+  title: 'Use headless frontend editing'
+  description: 'Edit content in place from the decoupled frontend.'
+administer headless frontend editing:
+  title: 'Administer headless frontend editing'
+  description: 'Configure the connection to the decoupled frontend.'
+  restrict access: true

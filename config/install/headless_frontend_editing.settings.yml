@@ -1,0 +1,13 @@
+frontend_url: ''
+frontend_internal_url: ''
+preview_path: /drupal-preview
+revalidate_path: /api/revalidate
+revalidate_entity_types:
+  - node
+  - menu_link_content
+  - path_alias
+  - taxonomy_term
+  - media
+  - block_content
+bundles: []
+form_mode: headless_editing

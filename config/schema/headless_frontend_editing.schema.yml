@@ -1,0 +1,34 @@
+headless_frontend_editing.settings:
+  type: config_object
+  label: 'Headless frontend editing settings'
+  mapping:
+    frontend_url:
+      type: string
+      label: 'Frontend URL'
+    frontend_internal_url:
+      type: string
+      label: 'Frontend internal URL'
+    preview_path:
+      type: string
+      label: 'Preview path'
+    revalidate_path:
+      type: string
+      label: 'Revalidate path'
+    revalidate_entity_types:
+      type: sequence
+      label: 'Entity types that trigger revalidation'
+      sequence:
+        type: string
+        label: 'Entity type ID'
+    bundles:
+      type: sequence
+      label: 'Editable bundles per entity type'
+      sequence:
+        type: sequence
+        label: 'Bundles'
+        sequence:
+          type: string
+          label: 'Bundle'
+    form_mode:
+      type: string
+      label: 'Form mode'

@@ -1,0 +1,4 @@
+decoupled
+headless
+revalidate
+revalidation

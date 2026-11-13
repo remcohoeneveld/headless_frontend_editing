@@ -1,0 +1,5 @@
+headless_frontend_editing.settings:
+  title: 'Headless frontend editing'
+  description: 'Configure in-place editing for the decoupled frontend.'
+  parent: system.admin_config_services
+  route_name: headless_frontend_editing.settings

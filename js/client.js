@@ -162,21 +162,28 @@
       const label = document.createElement('span');
       label.className = 'label';
       label.textContent = description.label;
-      const buttons = description.actions.map((action) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.textContent = action.label;
-        button.disabled = !!action.disabled;
-        button.addEventListener('click', () => {
-          post({
-            type: 'hfe:action',
-            target: description.id,
-            lang: description.lang,
-            action: action.id,
+      const buttons = description.actions
+        .filter(
+          (action) =>
+            action &&
+            typeof action.id === 'string' &&
+            typeof action.label === 'string',
+        )
+        .map((action) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = action.label;
+          button.disabled = !!action.disabled;
+          button.addEventListener('click', () => {
+            post({
+              type: 'hfe:action',
+              target: description.id,
+              lang: description.lang,
+              action: action.id,
+            });
           });
+          return button;
         });
-        return button;
-      });
       toolbar.replaceChildren(label, ...buttons);
       place();
     };
@@ -246,11 +253,18 @@
           event.ctrlKey ||
           event.shiftKey ||
           event.altKey ||
-          (link.target && link.target !== '_self')
+          (link.getAttribute('target') &&
+            link.getAttribute('target') !== '_self')
         ) {
           return;
         }
-        const url = new URL(link.href);
+        // getAttribute(): SVG links have no string href or target property.
+        let url;
+        try {
+          url = new URL(link.getAttribute('href'), window.location.href);
+        } catch (e) {
+          return;
+        }
         if (
           url.origin !== window.location.origin ||
           url.pathname === window.location.pathname

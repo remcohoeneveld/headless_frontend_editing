@@ -53,7 +53,7 @@ final class ViewTabTest extends BrowserTestBase {
   }
 
   /**
-   * Editors get a tokenised, editable preview.
+   * Editors get a tokenized, editable preview.
    */
   public function testEditorGetsEditablePreview(): void {
     $this->drupalLogin($this->drupalCreateUser(['use headless frontend editing', 'bypass node access', 'access content']));
@@ -94,6 +94,19 @@ final class ViewTabTest extends BrowserTestBase {
     $src = $this->iframeSrc();
     $this->assertStringContainsString("revision=$vid", $src);
     $this->assertStringNotContainsString('edit=1', $src);
+  }
+
+  /**
+   * Without the module permission, revisions keep core's render.
+   */
+  public function testRevisionWithoutPermission(): void {
+    $this->node->setTitle('Second')->setNewRevision();
+    $this->node->save();
+    $this->drupalLogin($this->drupalCreateUser(['bypass node access', 'view all revisions', 'access content']));
+    $vid = (int) $this->node->getRevisionId();
+    $this->drupalGet("node/1/revisions/$vid/view");
+    $this->assertSession()->elementNotExists('css', 'iframe.hfe-preview');
+    $this->assertSession()->pageTextContains('Second');
   }
 
   /**

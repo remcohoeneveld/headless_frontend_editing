@@ -132,7 +132,7 @@ final class ParagraphsHooks {
     foreach ([
       'up' => [$this->t('Move up'), $delta === 0],
       'down' => [$this->t('Move down'), $delta === $count - 1],
-      'delete' => [$this->t('Delete'), $count < 2],
+      'delete' => [$this->t('Delete'), $count < 2 || !$paragraph->access('delete', $this->currentUser)],
       'add-before' => [$this->t('Add section above'), $full],
       'add-after' => [$this->t('Add section below'), $full],
     ] as $id => [$label, $disabled]) {

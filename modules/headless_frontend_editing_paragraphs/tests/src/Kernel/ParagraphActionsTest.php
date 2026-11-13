@@ -8,6 +8,7 @@ use Drupal\field\Entity\FieldConfig;
 use Drupal\headless_frontend_editing\Controller\ProtocolController;
 use Drupal\headless_frontend_editing_paragraphs\ParagraphTree;
 use Drupal\headless_frontend_editing_paragraphs_test\Hook\LockedFieldHooks;
+use Drupal\headless_frontend_editing_paragraphs_test\Hook\ParagraphAccessHooks;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\node\Entity\Node;
@@ -136,6 +137,28 @@ final class ParagraphActionsTest extends KernelTestBase {
     $anchor = Paragraph::load($anchor->id());
     assert($anchor instanceof ParagraphInterface);
     $this->assertSame(['hero'], array_keys($this->container->get(ParagraphTree::class)->allowedTypes($anchor)));
+  }
+
+  /**
+   * Tests that types the user may not create are not offered.
+   */
+  public function testCreateAccess(): void {
+    $this->container->get('state')->set(ParagraphAccessHooks::NO_CREATE, 'hero');
+    [$anchor] = $this->sections(1);
+    $anchor = Paragraph::load($anchor->id());
+    assert($anchor instanceof ParagraphInterface);
+    $this->assertSame(['text'], array_keys($this->container->get(ParagraphTree::class)->allowedTypes($anchor)));
+  }
+
+  /**
+   * Tests that delete is disabled without delete access to the section.
+   */
+  public function testDeleteAccess(): void {
+    [$first, $second] = $this->sections(2);
+    $this->assertFalse($this->actions([$first])['paragraph:' . $first->uuid()]['delete']);
+    $this->container->get('state')->set(ParagraphAccessHooks::NO_DELETE, TRUE);
+    $this->container->get('entity_type.manager')->getAccessControlHandler('paragraph')->resetCache();
+    $this->assertTrue($this->actions([$second])['paragraph:' . $second->uuid()]['delete']);
   }
 
   /**

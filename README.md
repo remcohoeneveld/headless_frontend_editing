@@ -110,8 +110,15 @@ toolbar. Escape closes the sidebar; it asks before discarding unsaved changes.
 - The token (`{uid}.{expires}.{hmac}`, 10 minutes) is read-only. Send
   `X-HFE-Preview-Token` only to the JSON:API and GraphQL endpoint. Other Drupal
   routes answer 403 when the header is present.
-- A GraphQL mutation or a JSON:API write with the token is refused with 403.
-  Persisted queries (`queryId`) are refused.
+- A GraphQL mutation with the token is refused with 403, and so are persisted
+  queries (`queryId`). A JSON:API write with the token is handled as anonymous,
+  so it gets the anonymous user's access (normally a 403).
+- GraphQL results for token requests are not stored in the GraphQL results
+  cache, so preview content never reaches another user.
+- The token route is a same-origin GET for the signed-in editor.
+- The token provider is only listed on the JSON:API and GraphQL routes. Sites
+  with subrequest-style modules should not expose routes that list all
+  authentication providers, as those would accept the token too.
 - Responses to requests with the token are never page-cached (private, no-cache).
 - Every action is checked server-side: entity update access, field edit access,
   the root entity for Paragraphs, content moderation states, CSRF tokens on

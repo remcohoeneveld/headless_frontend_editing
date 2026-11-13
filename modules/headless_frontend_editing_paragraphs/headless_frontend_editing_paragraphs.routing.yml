@@ -48,7 +48,7 @@ headless_frontend_editing_paragraphs.delete:
     _title: 'Delete a section'
   requirements:
     _permission: 'use headless frontend editing'
-    _custom_access: '\Drupal\headless_frontend_editing_paragraphs\Controller\ParagraphController::access'
+    _custom_access: '\Drupal\headless_frontend_editing_paragraphs\Controller\ParagraphController::deleteAccess'
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
   options:
     _admin_route: true

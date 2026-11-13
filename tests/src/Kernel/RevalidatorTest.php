@@ -8,6 +8,7 @@ use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Site\Settings;
 use Drupal\headless_frontend_editing\Revalidator;
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\user\Entity\User;
@@ -39,6 +40,7 @@ final class RevalidatorTest extends KernelTestBase {
     'filter',
     'text',
     'node',
+    'language',
     'headless_frontend_editing',
   ];
 
@@ -78,7 +80,7 @@ final class RevalidatorTest extends KernelTestBase {
     $this->config('headless_frontend_editing.settings')
       ->set('frontend_internal_url', 'http://frontend:3000')
       ->save();
-    $this->setSecret('s3cret');
+    $this->setSecret('test-secret');
     // Setup saves must not count.
     $this->history->exchangeArray([]);
     $this->container->get(Revalidator::class)->destruct();
@@ -119,7 +121,7 @@ final class RevalidatorTest extends KernelTestBase {
     $request = $this->history[0]['request'];
     $this->assertSame('POST', $request->getMethod());
     $this->assertSame('http://frontend:3000/api/revalidate', (string) $request->getUri());
-    $this->assertSame('s3cret', $request->getHeaderLine('X-HFE-Revalidate-Secret'));
+    $this->assertSame('test-secret', $request->getHeaderLine('X-HFE-Revalidate-Secret'));
     $body = json_decode((string) $request->getBody(), TRUE);
     $this->assertEqualsCanonicalizing([
       ['type' => 'node', 'uuid' => $one->uuid(), 'langcode' => 'en'],
@@ -129,6 +131,32 @@ final class RevalidatorTest extends KernelTestBase {
     // The queue is flushed: a second destruct sends nothing.
     $this->container->get(Revalidator::class)->destruct();
     $this->assertCount(1, $this->history);
+  }
+
+  /**
+   * Updating or deleting a translated page queues every translation.
+   */
+  public function testAllTranslations(): void {
+    $this->installConfig(['language']);
+    ConfigurableLanguage::createFromLangcode('nl')->save();
+    $node = $this->page('One');
+    $node->addTranslation('nl', ['title' => 'Een'])->save();
+    $expected = [
+      ['type' => 'node', 'uuid' => $node->uuid(), 'langcode' => 'en'],
+      ['type' => 'node', 'uuid' => $node->uuid(), 'langcode' => 'nl'],
+    ];
+    $revalidator = $this->container->get(Revalidator::class);
+    $revalidator->destruct();
+    $this->history->exchangeArray([]);
+
+    $node->save();
+    $revalidator->destruct();
+    $node->delete();
+    $revalidator->destruct();
+    $this->assertCount(2, $this->history);
+    foreach ($this->history as $entry) {
+      $this->assertEqualsCanonicalizing($expected, json_decode((string) $entry['request']->getBody(), TRUE)['entities']);
+    }
   }
 
   /**

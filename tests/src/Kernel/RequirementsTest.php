@@ -34,7 +34,7 @@ final class RequirementsTest extends KernelTestBase {
       ->set('frontend_url', 'https://front.example')
       ->set('frontend_internal_url', 'http://frontend:3000')
       ->save();
-    new Settings(['headless_frontend_editing_revalidate_secret' => 's3cret'] + Settings::getAll());
+    new Settings(['headless_frontend_editing_revalidate_secret' => 'test-secret'] + Settings::getAll());
     $requirements = $this->getRequirements();
     $this->assertSame(RequirementSeverity::OK, $requirements['headless_frontend_editing']['severity']);
   }

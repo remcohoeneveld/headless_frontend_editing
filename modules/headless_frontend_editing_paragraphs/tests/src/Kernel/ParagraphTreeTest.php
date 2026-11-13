@@ -158,7 +158,7 @@ final class ParagraphTreeTest extends KernelTestBase {
 
     $this->container->get(LivePreview::class)->callback($form, $form_state);
 
-    $preview = $this->container->get('tempstore.private')->get('node_preview')->get('hfe-live-' . $node->uuid());
+    $preview = $this->container->get('tempstore.private')->get('node_preview')->get('hfe-live-' . $new->uuid());
     $sections = $preview->getFormObject()->getEntity()->get('field_sections');
     $this->assertCount(3, $sections);
     $this->assertSame($new->uuid(), $sections->get(1)->entity->uuid());

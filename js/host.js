@@ -274,7 +274,7 @@
             data.v !== 1 ||
             data.type !== 'hfe:navigate' ||
             typeof data.path !== 'string' ||
-            !/^\/(?!\/)/.test(data.path) ||
+            !/^\/(?![/\\])/.test(data.path) ||
             drupalSettings.path.baseUrl.replace(/\/$/, '') + data.path ===
               window.location.pathname
           ) {
@@ -300,8 +300,12 @@
           .addEventListener('click', close);
         document.addEventListener('keydown', onEscape);
         frame.addEventListener('load', () => {
-          dirty = false;
           const doc = frame.contentDocument;
+          // A form shown again with errors (a failed save) still holds the
+          // unsaved changes.
+          dirty = !!doc?.querySelector(
+            'form.hfe-form [aria-invalid="true"], .messages--error',
+          );
           if (!doc) {
             return;
           }

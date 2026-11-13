@@ -157,6 +157,25 @@ final class EditInPreviewTest extends WebDriverTestBase {
   }
 
   /**
+   * Tests that a save that fails validation keeps the unsaved changes guard.
+   */
+  public function testFailedSaveStaysDirty(): void {
+    $this->hoverTitle();
+    $this->getSession()->executeScript("document.querySelector('[data-hfe-overlay]').shadowRoot.querySelector('button').click()");
+    $this->enterFrame('hfe-editor__frame');
+    $this->assertSession()->waitForField('title[0][value]');
+    $this->getSession()->getPage()->fillField('title[0][value]', '');
+    $this->getSession()->executeScript("document.querySelector('input[name^=title]').removeAttribute('required'); window.hfeBeforeSave = true;");
+    $this->getSession()->getPage()->pressButton('Save');
+    $this->assertTrue($this->getSession()->wait(10000, '!window.hfeBeforeSave && !!document.querySelector(".messages--error, [aria-invalid=true]")'));
+    $this->getSession()->switchToIFrame();
+    $this->getSession()->executeScript('window.hfeConfirms = 0; window.confirm = () => { window.hfeConfirms++; return false; };');
+    $this->getSession()->getPage()->pressButton('Close');
+    $this->assertSame(1, $this->getSession()->evaluateScript('window.hfeConfirms'));
+    $this->assertFalse($this->assertSession()->elementExists('css', '.hfe-editor')->hasAttribute('hidden'));
+  }
+
+  /**
    * Tests that closing the sidebar after a live preview restores the page.
    */
   public function testCloseRestoresSavedPath(): void {
@@ -185,6 +204,28 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $href = $other->toUrl()->toString();
     $this->getSession()->executeScript("const a = document.createElement('a'); a.href = '$href'; a.textContent = 'Other page'; document.body.append(a);");
     $this->getSession()->getPage()->clickLink('Other page');
+    $this->getSession()->switchToIFrame();
+    $this->assertTrue($this->getSession()->wait(5000, "window.location.pathname === '$href'"));
+  }
+
+  /**
+   * Tests route sync with an SVG link, and that a backslash path is refused.
+   */
+  public function testSvgLinkAndBackslashPath(): void {
+    $other = $this->drupalCreateNode(['type' => 'article', 'title' => 'Other']);
+    $this->drupalGet($this->node->toUrl());
+    $url = $this->getSession()->getCurrentUrl();
+    $this->enterFrame('hfe-preview');
+    $this->assertSession()->waitForElement('css', 'h1');
+    // Browsers read /\host as //host.
+    $this->getSession()->executeScript("parent.postMessage({v: 1, type: 'hfe:navigate', path: '/\\\\evil.example'}, '*');");
+    $this->getSession()->switchToIFrame();
+    $this->getSession()->wait(1000);
+    $this->assertSame($url, $this->getSession()->getCurrentUrl());
+
+    $this->enterFrame('hfe-preview');
+    $href = $other->toUrl()->toString();
+    $this->getSession()->executeScript("const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); const a = document.createElementNS('http://www.w3.org/2000/svg', 'a'); a.setAttribute('href', '$href'); const t = document.createElementNS('http://www.w3.org/2000/svg', 'text'); a.append(t); svg.append(a); document.body.append(svg); t.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, button: 0}));");
     $this->getSession()->switchToIFrame();
     $this->assertTrue($this->getSession()->wait(5000, "window.location.pathname === '$href'"));
   }

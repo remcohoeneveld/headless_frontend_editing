@@ -48,8 +48,8 @@ and `token` query parameters and reloads.
 
 1. A preview route (default `/drupal-preview`) reading `path`, `token`,
    `revision` and `edit`, rendered uncached, sending `X-HFE-Preview-Token` to
-   the JSON:API or GraphQL endpoint only. The token is read-only: mutations,
-   JSON:API writes and persisted queries are refused.
+   the JSON:API or GraphQL endpoint only. The token is read-only: GraphQL
+   mutations and persisted queries get 403, JSON:API writes run as anonymous.
 2. With `edit=1` only: `data-hfe` attributes and `client.js`.
 3. `Content-Security-Policy: frame-ancestors <drupal-origin>` and
    `Referrer-Policy: no-referrer` on that route.

@@ -121,7 +121,11 @@ final class PreviewController extends ControllerBase {
   private function render(NodeInterface $node, string $path, ?int $revision_id, callable $fallback): array {
     $config = $this->config('headless_frontend_editing.settings');
     $bundles = $config->get('bundles.node') ?: [];
-    if ($bundles && !in_array($node->bundle(), $bundles, TRUE)) {
+    $route_name = $this->routeMatch->getRouteName();
+    $uses_editor = $this->currentUser()->hasPermission('use headless frontend editing');
+    // Only editors get a token, and without one the frontend cannot show
+    // revisions or previews.
+    if (($bundles && !in_array($node->bundle(), $bundles, TRUE)) || (!$uses_editor && $route_name !== 'entity.node.canonical')) {
       return $fallback();
     }
     $frontend_url = rtrim((string) $config->get('frontend_url'), '/');
@@ -137,8 +141,6 @@ final class PreviewController extends ControllerBase {
       ];
     }
 
-    $route_name = $this->routeMatch->getRouteName();
-    $uses_editor = $this->currentUser()->hasPermission('use headless frontend editing');
     $editable = $uses_editor && $route_name === 'entity.node.canonical' && $node->isDefaultRevision() && $node->access('update');
     $src = $frontend_url . $path;
     if ($uses_editor) {

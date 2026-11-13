@@ -8,6 +8,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\DestructableInterface;
 use Drupal\Core\Site\Settings;
+use Drupal\Core\TypedData\TranslatableInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
@@ -34,6 +35,9 @@ final class Revalidator implements DestructableInterface {
 
   /**
    * Queues an entity when its type is configured to trigger revalidation.
+   *
+   * Every translation is queued: untranslatable fields change all of them,
+   * and a deleted entity is gone in every language.
    */
   public function queue(EntityInterface $entity): void {
     $type = $entity->getEntityTypeId();
@@ -42,8 +46,10 @@ final class Revalidator implements DestructableInterface {
     if ($uuid === NULL || !in_array($type, $types, TRUE)) {
       return;
     }
-    $langcode = $entity->language()->getId();
-    $this->queue["$type:$uuid:$langcode"] = ['type' => $type, 'uuid' => $uuid, 'langcode' => $langcode];
+    $langcodes = $entity instanceof TranslatableInterface ? array_keys($entity->getTranslationLanguages()) : [$entity->language()->getId()];
+    foreach ($langcodes as $langcode) {
+      $this->queue["$type:$uuid:$langcode"] = ['type' => $type, 'uuid' => $uuid, 'langcode' => $langcode];
+    }
   }
 
   /**

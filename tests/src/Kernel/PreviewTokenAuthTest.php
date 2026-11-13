@@ -211,6 +211,35 @@ final class PreviewTokenAuthTest extends KernelTestBase {
   }
 
   /**
+   * GraphQL results for token requests stay out of the results cache.
+   */
+  public function testGraphqlResultsNotCached(): void {
+    $server = Server::load('preview');
+    $server->set('caching', TRUE)->save();
+    $bin = $this->container->get('cache.graphql.results');
+    $body = '{"query":"{ __typename }"}';
+
+    $this->request('POST', '/graphql', $this->token($this->editor), $body, 'application/json');
+    $this->assertSame((int) $this->editor->id(), (int) $this->container->get('current_user')->id());
+    $this->assertSame(0, $this->countRows($bin));
+
+    // Without the token the same query is cached, so the check above holds.
+    user_role_grant_permissions('anonymous', ['execute preview arbitrary graphql requests']);
+    $this->request('POST', '/graphql', NULL, $body, 'application/json');
+    $this->assertGreaterThan(0, $this->countRows($bin));
+  }
+
+  /**
+   * Counts the items in a database cache bin.
+   */
+  private function countRows(object $bin): int {
+    $table = (new \ReflectionProperty($bin, 'bin'))->getValue($bin);
+    return $this->container->get('database')->schema()->tableExists($table)
+      ? (int) $this->container->get('database')->select($table)->countQuery()->execute()->fetchField()
+      : 0;
+  }
+
+  /**
    * A token for a blocked user is anonymous.
    */
   public function testInactiveUser(): void {

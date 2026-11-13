@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\headless_frontend_editing\Kernel;
 
 use Drupal\Core\Form\FormState;
+use Drupal\headless_frontend_editing\Hook\EntityFormHooks;
 use Drupal\headless_frontend_editing\LivePreview;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\node\Entity\Node;
@@ -44,6 +45,10 @@ final class LivePreviewTest extends KernelTestBase {
     $form_state = (new FormState())->set('hfe', TRUE);
     $form = $this->container->get('form_builder')->buildForm($form_object, $form_state);
     $form_state->setValue(['title', 0, 'value'], 'Typing');
+    // A validation error of this request, as the form error handler shows it,
+    // and an unrelated error that must stay.
+    $form_state->setErrorByName('title', 'Title is required.');
+    $this->container->get('messenger')->addError('Unrelated.');
     $this->container->get('messenger')->addError('Title is required.');
 
     $response = $this->container->get(LivePreview::class)->callback($form, $form_state);
@@ -53,7 +58,11 @@ final class LivePreviewTest extends KernelTestBase {
     $preview = $this->container->get('tempstore.private')->get('node_preview')->get($key);
     $this->assertSame('Typing', $preview->getFormObject()->getEntity()->label());
     $this->assertSame('Saved', Node::load($node->id())->label());
-    $this->assertEmpty($this->container->get('messenger')->messagesByType('error'));
+    $this->assertSame(['Unrelated.'], array_map('strval', $this->container->get('messenger')->messagesByType('error')));
+
+    // Saving removes the live preview.
+    EntityFormHooks::redirectToSaved($form, $form_state);
+    $this->assertNull($this->container->get('tempstore.private')->get('node_preview')->get($key));
   }
 
 }

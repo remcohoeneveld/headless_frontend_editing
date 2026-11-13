@@ -6,6 +6,7 @@ namespace Drupal\Tests\headless_frontend_editing_paragraphs\Functional;
 
 use Drupal\Core\Url;
 use Drupal\headless_frontend_editing_paragraphs_test\Hook\LockedFieldHooks;
+use Drupal\headless_frontend_editing_paragraphs_test\Hook\ParagraphAccessHooks;
 use Drupal\node\NodeInterface;
 use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\paragraphs\ParagraphInterface;
@@ -153,6 +154,16 @@ final class ParagraphRoutesTest extends BrowserTestBase {
     // The only section left cannot be deleted.
     $this->drupalGet(Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $this->second->uuid()]));
     $this->assertSession()->buttonNotExists('Delete');
+  }
+
+  /**
+   * Tests that deleting needs delete access to the section.
+   */
+  public function testDeleteNeedsDeleteAccess(): void {
+    \Drupal::state()->set(ParagraphAccessHooks::NO_DELETE, TRUE);
+    $this->login();
+    $this->drupalGet(Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $this->first->uuid()]));
+    $this->assertSession()->statusCodeEquals(403);
   }
 
   /**

@@ -7,6 +7,7 @@ namespace Drupal\headless_frontend_editing;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFormInterface;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Form\FormState;
@@ -42,7 +43,14 @@ final class LivePreview {
    */
   public function callback(array &$form, FormStateInterface $form_state): AjaxResponse {
     // Half-typed content may not validate yet; those errors are for saving.
-    $this->messenger->deleteByType(MessengerInterface::TYPE_ERROR);
+    // Other errors in the session stay.
+    $own = array_map('strval', $form_state->getErrors());
+    $errors = $this->messenger->deleteByType(MessengerInterface::TYPE_ERROR);
+    foreach ($errors as $error) {
+      if (!in_array((string) $error, $own, TRUE)) {
+        $this->messenger->addError($error);
+      }
+    }
     $response = new AjaxResponse();
     $form_object = $form_state->getFormObject();
     assert($form_object instanceof EntityFormInterface);
@@ -59,12 +67,19 @@ final class LivePreview {
     $preview = (new FormState())->setFormObject(
       $this->entityTypeManager->getFormObject('node', 'default')->setEntity($root),
     );
-    $key = 'hfe-live-' . $root->uuid();
+    $key = self::key($entity);
     $this->tempStoreFactory->get('node_preview')->set($key, $preview);
 
     $path = Url::fromRoute('entity.node.preview', ['node_preview' => $key, 'view_mode_id' => 'full'])->toString();
     $path = PreviewController::withoutBasePath($path, $this->requestStack->getCurrentRequest()->getBasePath());
     return $response->addCommand(new LivePreviewCommand($path));
+  }
+
+  /**
+   * Returns the node preview tempstore key for an edited entity.
+   */
+  public static function key(EntityInterface $entity): string {
+    return 'hfe-live-' . $entity->uuid();
   }
 
 }

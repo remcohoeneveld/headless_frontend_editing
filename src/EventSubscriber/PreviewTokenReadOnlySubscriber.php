@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\headless_frontend_editing\EventSubscriber;
 
+use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\headless_frontend_editing\Authentication\PreviewTokenAuth;
 use GraphQL\Error\Error;
 use GraphQL\Language\Parser;
@@ -18,7 +19,9 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * Refuses GraphQL operations other than queries for preview-token requests.
  *
  * Runs after routing, on the operations the graphql module itself parsed, so
- * what is checked is exactly what will be executed.
+ * what is checked is exactly what will be executed. It also turns off the
+ * server's results cache for the request: preview results (unsaved live
+ * preview text, drafts) must not be stored or served to someone else.
  */
 final class PreviewTokenReadOnlySubscriber implements EventSubscriberInterface {
 
@@ -44,6 +47,11 @@ final class PreviewTokenReadOnlySubscriber implements EventSubscriberInterface {
       if (!$this->isQuery($operation)) {
         throw new AccessDeniedHttpException('Preview tokens only allow GraphQL queries.');
       }
+    }
+    // The server entity loaded for this request only; never saved.
+    $server = $request->attributes->get('graphql_server');
+    if ($server instanceof ConfigEntityInterface) {
+      $server->set('caching', FALSE);
     }
   }
 

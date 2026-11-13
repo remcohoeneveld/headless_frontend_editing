@@ -108,7 +108,7 @@ final class ParagraphController extends ControllerBase {
   }
 
   /**
-   * Swaps a section with its neighbour.
+   * Swaps a section with its neighbor.
    */
   public function move(string $uuid, string $direction): JsonResponse {
     return new JsonResponse(['moved' => $this->tree->move($this->load($uuid), $direction)]);
@@ -128,6 +128,16 @@ final class ParagraphController extends ControllerBase {
     }
     $result = $this->tree->access($paragraph, $account);
     return $result->isAllowed() ? $result : AccessResult::forbidden()->addCacheableDependency($result);
+  }
+
+  /**
+   * Checks access() plus delete access to the section itself.
+   */
+  public function deleteAccess(AccountInterface $account, string $uuid): AccessResultInterface {
+    $paragraph = $this->tree->load($uuid);
+    return $paragraph
+      ? $this->access($account, $uuid)->andIf($paragraph->access('delete', $account, TRUE))
+      : AccessResult::allowed()->setCacheMaxAge(0);
   }
 
   /**

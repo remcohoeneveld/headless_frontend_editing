@@ -184,7 +184,7 @@ final class EntityFormHooks {
     }
     $entity->setNewRevision();
     if ($entity instanceof RevisionLogInterface) {
-      $entity->setRevisionLogMessage((string) t('Updated @label from the frontend preview.', ['@label' => $entity->label()]));
+      $entity->setRevisionLogMessage((string) t('Updated @label from the frontend preview.', ['@label' => (string) $entity->label()]));
       $entity->setRevisionUserId((int) \Drupal::currentUser()->id());
       $entity->setRevisionCreationTime(\Drupal::time()->getRequestTime());
     }
@@ -193,12 +193,18 @@ final class EntityFormHooks {
   /**
    * Submit handler: sends the sidebar to the saved page.
    *
+   * Also removes the live preview of the unsaved form.
+   *
    * @param array<string, mixed> $form
    *   The form.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    */
   public static function redirectToSaved(array &$form, FormStateInterface $form_state): void {
+    $form_object = $form_state->getFormObject();
+    if ($form_object instanceof EntityFormInterface) {
+      \Drupal::service('tempstore.private')->get('node_preview')->delete(LivePreview::key($form_object->getEntity()));
+    }
     $form_state->setRedirect('headless_frontend_editing.saved');
   }
 

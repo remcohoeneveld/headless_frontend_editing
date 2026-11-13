@@ -169,10 +169,10 @@ final class ParagraphTree {
   }
 
   /**
-   * Swaps a paragraph with its neighbour and saves the root.
+   * Swaps a paragraph with its neighbor and saves the root.
    *
    * @return bool
-   *   FALSE when there is no neighbour in that direction.
+   *   FALSE when there is no neighbor in that direction.
    */
   public function move(ParagraphInterface $paragraph, string $direction): bool {
     $items = $this->items($paragraph) ?? throw new \LogicException('The paragraph has no parent.');
@@ -194,7 +194,8 @@ final class ParagraphTree {
    * Returns the paragraph types that can be added next to a paragraph.
    *
    * @return \Drupal\paragraphs\ParagraphsTypeInterface[]
-   *   The types the parent field allows, keyed by id; none when it is full.
+   *   The types the parent field allows and the user may create, keyed by
+   *   id; none when it is full.
    */
   public function allowedTypes(ParagraphInterface $anchor): array {
     $items = $this->items($anchor);
@@ -207,11 +208,12 @@ final class ParagraphTree {
     $bundles = $settings['target_bundles'] ?? NULL;
     /** @var \Drupal\paragraphs\ParagraphsTypeInterface[] $types */
     $types = $this->entityTypeManager->getStorage('paragraphs_type')->loadMultiple();
-    if (!$bundles) {
-      return $types;
+    if ($bundles) {
+      // With negate, target_bundles lists the types the field excludes.
+      $types = empty($settings['negate']) ? array_intersect_key($types, $bundles) : array_diff_key($types, $bundles);
     }
-    // With negate, target_bundles lists the types the field excludes.
-    return empty($settings['negate']) ? array_intersect_key($types, $bundles) : array_diff_key($types, $bundles);
+    $access = $this->entityTypeManager->getAccessControlHandler('paragraph');
+    return array_filter($types, fn ($type) => $access->createAccess($type->id(), $this->currentUser));
   }
 
   /**

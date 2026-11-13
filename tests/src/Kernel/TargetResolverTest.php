@@ -24,7 +24,8 @@ final class TargetResolverTest extends KernelTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'system', 'user', 'field', 'filter', 'text', 'node', 'language', 'content_translation', 'headless_frontend_editing',
+    'system', 'user', 'field', 'filter', 'text', 'node', 'language', 'content_translation', 'entity_test',
+    'headless_frontend_editing',
   ];
 
   /**
@@ -39,6 +40,7 @@ final class TargetResolverTest extends KernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
+    $this->installEntitySchema('entity_test_no_uuid');
     $this->installConfig(['node']);
     $this->installSchema('node', ['node_access']);
     ConfigurableLanguage::createFromLangcode('nl')->save();
@@ -85,20 +87,48 @@ final class TargetResolverTest extends KernelTestBase {
    *   Target templates.
    */
   public static function malformed(): array {
-    return [['node:123'], ['NODE:UUID'], ['node:UUID:x:y'], ['config_test:UUID']];
+    return [['node:123'], ['NODE:UUID'], ['node:UUID:x:y'], ['user_role:UUID'], ['entity_test_no_uuid:UUID']];
   }
 
   /**
    * Tests that a missing translation does not resolve.
    */
   public function testMissingTranslation(): void {
+    $this->enableTranslation();
     $this->assertNull($this->resolver()->resolve('node:' . $this->node->uuid(), 'nl'));
+  }
+
+  /**
+   * Tests that a non-translatable entity ignores the requested language.
+   */
+  public function testNotTranslatable(): void {
+    $this->assertSame('en', $this->resolver()->resolve('node:' . $this->node->uuid(), 'nl')?->entity->language()->getId());
+  }
+
+  /**
+   * Tests that a locked language ignores the requested language.
+   */
+  public function testLockedLanguage(): void {
+    $this->enableTranslation();
+    $node = Node::create(['type' => 'article', 'title' => 'Neutral', 'langcode' => 'zxx']);
+    $node->save();
+    $this->assertSame('zxx', $this->resolver()->resolve('node:' . $node->uuid(), 'nl')?->entity->language()->getId());
+  }
+
+  /**
+   * Makes articles translatable.
+   */
+  private function enableTranslation(): void {
+    $this->container->get('content_translation.manager')->setEnabled('node', 'article', TRUE);
+    $this->container->get('entity_field.manager')->clearCachedFieldDefinitions();
+    $this->node = Node::load($this->node->id());
   }
 
   /**
    * Tests that the requested translation is returned.
    */
   public function testTranslation(): void {
+    $this->enableTranslation();
     $uuid = $this->node->uuid();
     $this->node->addTranslation('nl', ['title' => 'Hallo'])->save();
     $dutch = $this->resolver()->resolve("node:$uuid", 'nl');

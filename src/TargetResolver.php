@@ -29,14 +29,23 @@ final class TargetResolver {
       return NULL;
     }
     $field = $m[3] ?? NULL;
-    if (!($this->entityTypeManager->getDefinition($m[1], FALSE) instanceof ContentEntityTypeInterface)) {
+    // loadEntityByUuid() throws for types without a uuid key.
+    $definition = $this->entityTypeManager->getDefinition($m[1], FALSE);
+    if (!$definition instanceof ContentEntityTypeInterface || !$definition->hasKey('uuid')) {
       return NULL;
     }
     $entity = $this->entityRepository->loadEntityByUuid($m[1], $m[2]);
-    if (!$entity instanceof ContentEntityInterface || !$entity->hasTranslation($langcode)) {
+    if (!$entity instanceof ContentEntityInterface) {
       return NULL;
     }
-    $entity = $entity->getTranslation($langcode);
+    // Entities that cannot be translated (or have a locked language such as
+    // und or zxx) are used as they are, whatever language was asked for.
+    if ($entity->isTranslatable()) {
+      if (!$entity->hasTranslation($langcode)) {
+        return NULL;
+      }
+      $entity = $entity->getTranslation($langcode);
+    }
     return $field === NULL || $entity->hasField($field) ? new Target($entity, $field) : NULL;
   }
 

@@ -111,8 +111,6 @@ final class DescribeTest extends KernelTestBase {
     $user = $this->setUpCurrentUser([], ['use headless frontend editing']);
     $data = json_decode(ProtocolController::create($this->container)->token()->getContent(), TRUE);
     $this->assertSame((int) $user->id(), $this->container->get(PreviewToken::class)->validate($data['token']));
-    $route = $this->container->get('router.route_provider')->getRouteByName('headless_frontend_editing.token');
-    $this->assertSame('use headless frontend editing', $route->getRequirement('_permission'));
     $access = $this->container->get('access_manager');
     $this->assertFalse($access->checkNamedRoute('headless_frontend_editing.token', [], $this->createUser()));
     $this->assertTrue($access->checkNamedRoute('headless_frontend_editing.token', [], $user));

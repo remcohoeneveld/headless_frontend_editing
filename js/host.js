@@ -3,7 +3,15 @@
  * Panel toggle and route sync for the decoupled frontend view tab.
  */
 
-(function (Drupal, drupalSettings, once) {
+/**
+ * @param {object} Drupal
+ *   The Drupal global.
+ * @param {object} drupalSettings
+ *   The Drupal settings.
+ * @param {Function} once
+ *   The once() helper.
+ */
+((Drupal, drupalSettings, once) => {
   const STORAGE_KEY = 'headlessFrontendEditing.panelCollapsed';
 
   Drupal.behaviors.headlessFrontendEditingPanel = {
@@ -49,11 +57,14 @@
             data.type !== 'hfe:navigate' ||
             typeof data.path !== 'string' ||
             !/^\/(?!\/)/.test(data.path) ||
-            data.path === window.location.pathname
+            drupalSettings.path.baseUrl.replace(/\/$/, '') + data.path ===
+              window.location.pathname
           ) {
             return;
           }
-          window.location.assign(data.path);
+          window.location.assign(
+            drupalSettings.path.baseUrl.replace(/\/$/, '') + data.path,
+          );
         });
       });
     },

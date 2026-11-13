@@ -67,7 +67,7 @@ final class PreviewController extends ControllerBase {
    *   A render array.
    */
   public function canonical(NodeInterface $node, string $view_mode = 'full'): array {
-    return $this->render($node, $node->toUrl('canonical')->toString(), NULL,
+    return $this->render($node, $this->frontendPath($node), NULL,
       fn () => $this->classResolver->getInstanceFromDefinition(EntityViewController::class)->view($node, $view_mode));
   }
 
@@ -78,7 +78,7 @@ final class PreviewController extends ControllerBase {
    *   A render array.
    */
   public function revision(NodeInterface $node_revision): array {
-    return $this->render($node_revision, $node_revision->toUrl('canonical')->toString(), (int) $node_revision->getRevisionId(),
+    return $this->render($node_revision, $this->frontendPath($node_revision), (int) $node_revision->getRevisionId(),
       fn () => $this->classResolver->getInstanceFromDefinition(NodeController::class)->revisionShow($node_revision));
   }
 
@@ -186,6 +186,23 @@ final class PreviewController extends ControllerBase {
       'describeUrl' => Url::fromUserInput('/headless-frontend-editing/describe')->toString(),
     ];
     return $build;
+  }
+
+  /**
+   * Returns the node's path as the frontend knows it, without the base path.
+   */
+  private function frontendPath(NodeInterface $node): string {
+    return self::withoutBasePath(
+      $node->toUrl('canonical')->toString(),
+      $this->requestStack->getCurrentRequest()->getBasePath(),
+    );
+  }
+
+  /**
+   * Strips a Drupal base path (such as /sub) from the start of a path.
+   */
+  public static function withoutBasePath(string $path, string $base_path): string {
+    return $base_path !== '' && str_starts_with($path, $base_path . '/') ? substr($path, strlen($base_path)) : $path;
   }
 
   /**

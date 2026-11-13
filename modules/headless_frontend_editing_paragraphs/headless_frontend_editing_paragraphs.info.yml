@@ -1,0 +1,8 @@
+name: Headless Frontend Editing Paragraphs
+type: module
+description: 'Add, move and delete Paragraphs sections from the decoupled frontend preview.'
+package: Web services
+core_version_requirement: ^11.4 || ^12
+dependencies:
+  - headless_frontend_editing:headless_frontend_editing
+  - paragraphs:paragraphs

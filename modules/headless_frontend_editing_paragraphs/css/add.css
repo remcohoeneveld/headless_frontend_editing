@@ -1,0 +1,41 @@
+.hfe-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+/* With type icons: a grid of cards, each with the type's name below. */
+.hfe-add:has(.hfe-add__card) {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 1rem;
+}
+
+.hfe-add li {
+  margin: 0;
+}
+
+.hfe-add__card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  font-weight: 600;
+  gap: 0.5rem;
+}
+
+.hfe-add__card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #00000026;
+  border-radius: 0.5rem;
+}
+
+.hfe-add__card:hover img,
+.hfe-add__card:focus-visible img {
+  border-color: currentColor;
+  box-shadow: 0 0 0 2px currentColor;
+}

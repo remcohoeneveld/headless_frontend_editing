@@ -1,0 +1,205 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\Tests\headless_frontend_editing_paragraphs\Functional;
+
+use Drupal\Core\Url;
+use Drupal\node\NodeInterface;
+use Drupal\paragraphs\Entity\Paragraph;
+use Drupal\paragraphs\ParagraphInterface;
+use Drupal\Tests\BrowserTestBase;
+use Drupal\Tests\paragraphs\FunctionalJavascript\ParagraphsTestBaseTrait;
+use GuzzleHttp\RequestOptions;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+
+/**
+ * Tests adding, moving and deleting sections over HTTP.
+ */
+#[Group('headless_frontend_editing')]
+#[RunTestsInSeparateProcesses]
+final class ParagraphRoutesTest extends BrowserTestBase {
+
+  use ParagraphsTestBaseTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected static $modules = ['node', 'headless_frontend_editing', 'headless_frontend_editing_paragraphs'];
+
+  /**
+   * {@inheritdoc}
+   */
+  protected $defaultTheme = 'stark';
+
+  /**
+   * The page.
+   */
+  private NodeInterface $node;
+
+  /**
+   * The first section.
+   */
+  private ParagraphInterface $first;
+
+  /**
+   * The second section.
+   */
+  private ParagraphInterface $second;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    parent::setUp();
+    $this->addParagraphedContentType('page', 'field_sections');
+    $this->addParagraphsType('text');
+    $this->addFieldtoParagraphType('text', 'field_text', 'string');
+    $this->first = Paragraph::create(['type' => 'text', 'field_text' => 'First']);
+    $this->second = Paragraph::create(['type' => 'text', 'field_text' => 'Second']);
+    $this->node = $this->drupalCreateNode(['type' => 'page', 'field_sections' => [$this->first, $this->second]]);
+  }
+
+  /**
+   * Logs in an editor, with or without access to edit pages.
+   */
+  private function login(bool $update = TRUE): void {
+    $permissions = ['access content', 'use headless frontend editing'];
+    if ($update) {
+      $permissions[] = 'edit any page content';
+    }
+    $this->drupalLogin($this->drupalCreateUser($permissions));
+  }
+
+  /**
+   * Returns the page reloaded from storage.
+   */
+  private function reload(): NodeInterface {
+    $storage = \Drupal::entityTypeManager()->getStorage('node');
+    $storage->resetCache();
+    $node = $storage->load($this->node->id());
+    assert($node instanceof NodeInterface);
+    return $node;
+  }
+
+  /**
+   * Returns the section texts of the page, in order.
+   *
+   * @return string[]
+   *   The texts.
+   */
+  private function texts(): array {
+    \Drupal::entityTypeManager()->getStorage('paragraph')->resetCache();
+    return array_map(fn ($paragraph) => $paragraph->get('field_text')->value, $this->reload()->get('field_sections')->referencedEntities());
+  }
+
+  /**
+   * POSTs a move, with or without a CSRF token.
+   */
+  private function move(string $direction, bool $token): int {
+    $parameters = ['uuid' => $this->first->uuid(), 'direction' => $direction];
+    $url = Url::fromRoute('headless_frontend_editing_paragraphs.move', $parameters)->setAbsolute()->toString();
+    $headers = [];
+    if ($token) {
+      $this->drupalGet('session/token');
+      $headers['X-CSRF-Token'] = $this->getSession()->getPage()->getContent();
+    }
+    $response = $this->getHttpClient()->request('POST', $url, [
+      RequestOptions::HEADERS => $headers,
+      RequestOptions::COOKIES => $this->getSessionCookies(),
+      RequestOptions::HTTP_ERRORS => FALSE,
+    ]);
+    return $response->getStatusCode();
+  }
+
+  /**
+   * Tests that moving needs the CSRF header and swaps the sections.
+   */
+  public function testMove(): void {
+    $this->login();
+    $revision = (int) $this->node->getRevisionId();
+    $this->assertSame(403, $this->move('down', FALSE));
+    $this->assertSame(['First', 'Second'], $this->texts());
+    $this->assertSame(200, $this->move('down', TRUE));
+    $this->assertSame(['Second', 'First'], $this->texts());
+    $node = $this->reload();
+    $this->assertGreaterThan($revision, (int) $node->getRevisionId());
+    $this->assertSame('Moved text from the frontend preview.', $node->getRevisionLogMessage());
+  }
+
+  /**
+   * Tests deleting a section after confirming.
+   */
+  public function testDelete(): void {
+    $this->login();
+    $revision = (int) $this->node->getRevisionId();
+    $this->drupalGet(Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $this->first->uuid()]));
+    $this->assertSession()->pageTextContains('Delete the text section?');
+    $this->submitForm([], 'Delete');
+    $this->assertSession()->addressEquals(Url::fromRoute('headless_frontend_editing.saved'));
+    $this->assertSame(['Second'], $this->texts());
+    $node = $this->reload();
+    $this->assertGreaterThan($revision, (int) $node->getRevisionId());
+    $this->assertSame('Deleted text from the frontend preview.', $node->getRevisionLogMessage());
+
+    // The only section left cannot be deleted.
+    $this->drupalGet(Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $this->second->uuid()]));
+    $this->assertSession()->buttonNotExists('Delete');
+  }
+
+  /**
+   * Tests adding a section after another one, and editing it.
+   */
+  public function testAddAndEdit(): void {
+    $this->login();
+    $uuid = $this->first->uuid();
+    $this->drupalGet(Url::fromRoute('headless_frontend_editing_paragraphs.add', ['uuid' => $uuid, 'position' => 'after']));
+    $this->clickLink('text');
+    $this->assertSession()->addressEquals(Url::fromRoute('headless_frontend_editing_paragraphs.add_form', [
+      'uuid' => $this->first->uuid(),
+      'position' => 'after',
+      'bundle' => 'text',
+    ]));
+    $this->submitForm(['field_text[0][value]' => 'Between'], 'Save');
+    $this->assertSession()->addressEquals(Url::fromRoute('headless_frontend_editing.saved'));
+    $this->assertSame(['First', 'Between', 'Second'], $this->texts());
+    $this->assertSame('Added text from the frontend preview.', $this->reload()->getRevisionLogMessage());
+
+    $target = 'paragraph:' . $this->second->uuid();
+    $this->drupalGet(Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => $target]));
+    $this->submitForm(['field_text[0][value]' => 'Changed'], 'Save');
+    $this->assertSame(['First', 'Between', 'Changed'], $this->texts());
+    $this->assertSame('Updated text from the frontend preview.', $this->reload()->getRevisionLogMessage());
+
+    $this->drupalGet(Url::fromRoute('headless_frontend_editing_paragraphs.add_form', [
+      'uuid' => $this->first->uuid(),
+      'position' => 'after',
+      'bundle' => 'missing',
+    ]));
+    $this->assertSession()->statusCodeEquals(404);
+  }
+
+  /**
+   * Tests that every route needs update access to the page.
+   */
+  public function testNoAccess(): void {
+    $this->login(FALSE);
+    $uuid = $this->first->uuid();
+    foreach ([
+      Url::fromRoute('headless_frontend_editing_paragraphs.add', ['uuid' => $uuid, 'position' => 'before']),
+      Url::fromRoute('headless_frontend_editing_paragraphs.add_form', [
+        'uuid' => $uuid,
+        'position' => 'before',
+        'bundle' => 'text',
+      ]),
+      Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $uuid]),
+    ] as $url) {
+      $this->drupalGet($url);
+      $this->assertSession()->statusCodeEquals(403);
+    }
+    $this->assertSame(403, $this->move('down', TRUE));
+    $this->assertSame(['First', 'Second'], $this->texts());
+  }
+
+}

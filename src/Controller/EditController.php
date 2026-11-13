@@ -56,20 +56,13 @@ final class EditController extends ControllerBase {
   }
 
   /**
-   * Checks update access to the target, and edit access to its field.
+   * Checks access to the target, see TargetResolver::access().
    *
    * Targets that do not resolve are let through, so edit() can answer 404.
    */
   public function access(AccountInterface $account, string $langcode, string $target): AccessResultInterface {
     $resolved = $this->resolver->resolve($target, $langcode);
-    if (!$resolved) {
-      return AccessResult::allowed()->setCacheMaxAge(0);
-    }
-    $result = $resolved->entity->access('update', $account, TRUE);
-    if ($resolved->fieldName !== NULL) {
-      $result = $result->andIf($resolved->entity->get($resolved->fieldName)->access('edit', $account, TRUE));
-    }
-    return $result->isAllowed() ? $result : AccessResult::forbidden()->addCacheableDependency($result);
+    return $resolved ? $this->resolver->access($resolved, $account) : AccessResult::allowed()->setCacheMaxAge(0);
   }
 
   /**

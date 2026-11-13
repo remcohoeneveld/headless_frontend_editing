@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\headless_frontend_editing;
 
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\ContentEntityTypeInterface;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * Turns a target string into the entity (translation) and field it names.
@@ -19,6 +23,7 @@ final class TargetResolver {
   public function __construct(
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly EntityRepositoryInterface $entityRepository,
+    private readonly ModuleHandlerInterface $moduleHandler,
   ) {}
 
   /**
@@ -47,6 +52,31 @@ final class TargetResolver {
       $entity = $entity->getTranslation($langcode);
     }
     return $field === NULL || $entity->hasField($field) ? new Target($entity, $field) : NULL;
+  }
+
+  /**
+   * Checks whether an account may edit a target.
+   *
+   * Needs update access to the entity and edit access to the field, and no
+   * forbidden result from hook_headless_frontend_editing_target_access().
+   * Composite entities, such as paragraphs, are saved through their host, so
+   * they also need a module that knows the host to allow them.
+   */
+  public function access(Target $target, AccountInterface $account): AccessResultInterface {
+    $entity = $target->entity;
+    $result = $entity->access('update', $account, TRUE);
+    if ($target->fieldName !== NULL) {
+      $result = $result->andIf($entity->get($target->fieldName)->access('edit', $account, TRUE));
+    }
+    $hooks = AccessResult::neutral();
+    foreach ($this->moduleHandler->invokeAll('headless_frontend_editing_target_access', [$target, $account]) as $hook) {
+      $hooks = $hooks->orIf($hook);
+    }
+    $composite = (bool) $entity->getEntityType()->get('entity_revision_parent_type_field');
+    if (!$result->isAllowed() || $hooks->isForbidden() || ($composite && !$hooks->isAllowed())) {
+      return AccessResult::forbidden()->addCacheableDependency($result)->addCacheableDependency($hooks)->setCacheMaxAge(0);
+    }
+    return AccessResult::allowed()->addCacheableDependency($result)->addCacheableDependency($hooks);
   }
 
 }

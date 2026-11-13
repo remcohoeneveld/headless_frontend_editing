@@ -5,9 +5,32 @@
  * Hooks provided by Headless Frontend Editing.
  */
 
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\headless_frontend_editing\Target;
+
+/**
+ * Checks access to edit a target, on top of entity and field access.
+ *
+ * Runs for describe and for the edit route. Any forbidden result refuses the
+ * target. Composite entities (such as paragraphs, which are saved through
+ * their host) are refused unless an implementation allows them; neutral
+ * leaves other targets as entity and field access decide.
+ *
+ * @param \Drupal\headless_frontend_editing\Target $target
+ *   The target.
+ * @param \Drupal\Core\Session\AccountInterface $account
+ *   The user.
+ *
+ * @return \Drupal\Core\Access\AccessResultInterface
+ *   The access result.
+ */
+function hook_headless_frontend_editing_target_access(Target $target, AccountInterface $account): AccessResultInterface {
+  return AccessResult::forbiddenIf($target->fieldName === 'sticky')->setCacheMaxAge(0);
+}
 
 /**
  * Alters the description of a target before describe returns it.

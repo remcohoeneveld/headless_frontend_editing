@@ -55,7 +55,7 @@ final class ProtocolController extends ControllerBase {
         continue;
       }
       $target = $this->resolver->resolve($item['id'], $item['lang']);
-      if (!$target || !$target->entity->access('update')) {
+      if (!$target || !$this->resolver->access($target, $this->currentUser())->isAllowed()) {
         continue;
       }
       $entity = $target->entity;
@@ -66,9 +66,6 @@ final class ProtocolController extends ControllerBase {
         $action = $this->t('Edit @label', ['@label' => $name]);
       }
       else {
-        if (!$entity->get($target->fieldName)->access('edit')) {
-          continue;
-        }
         $label = $entity->get($target->fieldName)->getFieldDefinition()->getLabel();
         $action = $this->t('Edit @label', ['@label' => $label]);
       }

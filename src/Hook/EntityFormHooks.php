@@ -40,6 +40,9 @@ final class EntityFormHooks {
    *
    * Every content entity type with an edit or default form gets the editing
    * operation, with the same class, so its own form logic keeps working.
+   * Composite types (paragraphs) are left out: saved on their own, the host
+   * would keep pointing at the old revision. A module that saves them through
+   * their host sets the form class itself.
    *
    * @param array<string, \Drupal\Core\Entity\EntityTypeInterface> $entity_types
    *   The entity types.
@@ -48,7 +51,7 @@ final class EntityFormHooks {
   public function entityTypeBuild(array &$entity_types): void {
     foreach ($entity_types as $entity_type) {
       $class = $entity_type->getFormClass('edit') ?: $entity_type->getFormClass('default');
-      if ($entity_type instanceof ContentEntityTypeInterface && $class && !$entity_type->getFormClass(self::OPERATION)) {
+      if ($entity_type instanceof ContentEntityTypeInterface && $class && !$entity_type->getFormClass(self::OPERATION) && !$entity_type->get('entity_revision_parent_type_field')) {
         $entity_type->setFormClass(self::OPERATION, $class);
       }
     }

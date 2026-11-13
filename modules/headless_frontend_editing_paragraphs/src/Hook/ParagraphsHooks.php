@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\headless_frontend_editing_paragraphs\Hook;
 
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Form\FormStateInterface;
@@ -88,6 +90,22 @@ final class ParagraphsHooks {
   }
 
   /**
+   * Implements hook_headless_frontend_editing_target_access().
+   *
+   * A paragraph is edited through the page it is on: that needs access to the
+   * root and to the section field of every parent. Paragraphs that are no
+   * longer referenced are refused.
+   */
+  #[Hook('headless_frontend_editing_target_access')]
+  public function targetAccess(Target $target, AccountInterface $account): AccessResultInterface {
+    if (!$target->entity instanceof ParagraphInterface) {
+      return AccessResult::neutral();
+    }
+    $paragraph = $this->tree->load($target->entity->uuid());
+    return $paragraph ? $this->tree->access($paragraph, $account) : AccessResult::forbidden()->setCacheMaxAge(0);
+  }
+
+  /**
    * Implements hook_headless_frontend_editing_target_alter().
    *
    * Adds moving, deleting and adding sections to paragraph targets.
@@ -103,7 +121,8 @@ final class ParagraphsHooks {
     if ($target->fieldName !== NULL || !$paragraph instanceof ParagraphInterface || !$this->tree->load($paragraph->uuid())) {
       return;
     }
-    if (!$this->tree->access($paragraph, $this->currentUser)->isAllowed() || !$this->canRearrange($paragraph)) {
+    // Describe only gets here once targetAccess() allowed the paragraph.
+    if (!$this->canRearrange($paragraph)) {
       return;
     }
     $items = $this->tree->items($paragraph);

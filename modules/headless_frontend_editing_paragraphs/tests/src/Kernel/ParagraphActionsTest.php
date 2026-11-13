@@ -174,7 +174,7 @@ final class ParagraphActionsTest extends KernelTestBase {
   }
 
   /**
-   * Tests that a section field the user may not edit only offers edit.
+   * Tests that a section whose parent field is locked is not offered at all.
    */
   public function testLockedField(): void {
     $this->addParagraphsType('group');
@@ -185,9 +185,19 @@ final class ParagraphActionsTest extends KernelTestBase {
     Node::create(['type' => 'page', 'title' => 'Page', 'field_sections' => [$group]])->save();
     $this->assertContains('up', array_keys($this->actions([$child])['paragraph:' . $child->uuid()]));
 
-    // A locked ancestor field counts too.
+    // A locked ancestor field counts too, also for editing the section.
     $this->container->get('state')->set(LockedFieldHooks::STATE, 'field_sections');
-    $this->assertSame(['edit'], array_keys($this->actions([$child])['paragraph:' . $child->uuid()]));
+    $this->assertSame([], $this->actions([$child]));
+    $this->assertSame([], $this->actions([$group]));
+  }
+
+  /**
+   * Tests that a section no page references is not offered.
+   */
+  public function testOrphan(): void {
+    $orphan = Paragraph::create(['type' => 'text']);
+    $orphan->save();
+    $this->assertSame([], $this->actions([$orphan]));
   }
 
 }

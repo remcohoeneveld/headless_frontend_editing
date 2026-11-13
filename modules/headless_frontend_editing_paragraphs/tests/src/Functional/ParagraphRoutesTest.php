@@ -216,6 +216,8 @@ final class ParagraphRoutesTest extends BrowserTestBase {
     $this->login();
     $uuid = $this->first->uuid();
     foreach ([
+      Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => "paragraph:$uuid"]),
+      Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => "paragraph:$uuid:field_text"]),
       Url::fromRoute('headless_frontend_editing_paragraphs.add', ['uuid' => $uuid, 'position' => 'before']),
       Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $uuid]),
     ] as $url) {

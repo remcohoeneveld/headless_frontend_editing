@@ -57,10 +57,12 @@ final class TargetResolver {
   /**
    * Checks whether an account may edit a target.
    *
-   * Needs update access to the entity and edit access to the field, and no
-   * forbidden result from hook_headless_frontend_editing_target_access().
-   * Composite entities, such as paragraphs, are saved through their host, so
-   * they also need a module that knows the host to allow them.
+   * Needs update access to the entity and edit access to the field, no
+   * pending draft (the form edits the default revision, so saving would lose
+   * the draft) and no forbidden result from
+   * hook_headless_frontend_editing_target_access(). Composite entities, such
+   * as paragraphs, are saved through their host, so they also need a module
+   * that knows the host to allow them.
    */
   public function access(Target $target, AccountInterface $account): AccessResultInterface {
     $entity = $target->entity;
@@ -73,7 +75,7 @@ final class TargetResolver {
       $hooks = $hooks->orIf($hook);
     }
     $composite = (bool) $entity->getEntityType()->get('entity_revision_parent_type_field');
-    if (!$result->isAllowed() || $hooks->isForbidden() || ($composite && !$hooks->isAllowed())) {
+    if (!$result->isAllowed() || $hooks->isForbidden() || ($composite && !$hooks->isAllowed()) || !$entity->isLatestRevision()) {
       return AccessResult::forbidden()->addCacheableDependency($result)->addCacheableDependency($hooks)->setCacheMaxAge(0);
     }
     return AccessResult::allowed()->addCacheableDependency($result)->addCacheableDependency($hooks);

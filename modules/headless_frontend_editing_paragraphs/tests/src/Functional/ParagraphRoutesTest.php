@@ -29,6 +29,7 @@ final class ParagraphRoutesTest extends BrowserTestBase {
    */
   protected static $modules = [
     'node',
+    'content_moderation',
     'headless_frontend_editing',
     'headless_frontend_editing_paragraphs',
     'headless_frontend_editing_paragraphs_test',
@@ -226,6 +227,38 @@ final class ParagraphRoutesTest extends BrowserTestBase {
     }
     $this->assertSame(403, $this->move('down', TRUE));
     $this->assertSame(['First', 'Second'], $this->texts());
+  }
+
+  /**
+   * Tests that a page with a pending draft refuses every section route.
+   */
+  public function testPendingDraft(): void {
+    $this->createEditorialWorkflow('page');
+    $node = $this->reload();
+    $node->set('moderation_state', 'published')->save();
+    $node->set('moderation_state', 'draft')->save();
+    $this->drupalLogin($this->drupalCreateUser([
+      'access content',
+      'use headless frontend editing',
+      'edit any page content',
+      "use {$this->workflow->id()} transition create_new_draft",
+      "use {$this->workflow->id()} transition publish",
+    ]));
+    $uuid = $this->first->uuid();
+    foreach ([
+      Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => "paragraph:$uuid"]),
+      Url::fromRoute('headless_frontend_editing_paragraphs.add', ['uuid' => $uuid, 'position' => 'before']),
+      Url::fromRoute('headless_frontend_editing_paragraphs.add_form', [
+        'uuid' => $uuid,
+        'position' => 'before',
+        'bundle' => 'text',
+      ]),
+      Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $uuid]),
+    ] as $url) {
+      $this->drupalGet($url);
+      $this->assertSession()->statusCodeEquals(403);
+    }
+    $this->assertSame(403, $this->move('down', TRUE));
   }
 
 }

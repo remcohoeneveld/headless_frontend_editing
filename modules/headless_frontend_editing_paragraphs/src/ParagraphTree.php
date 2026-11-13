@@ -64,10 +64,12 @@ final class ParagraphTree {
    *
    * That changes the reference field of every parent up to the root, so it
    * needs update access to the root and edit access to each of those fields.
+   * A root with a pending draft is refused: the change would be saved on the
+   * default revision and the draft lost.
    */
   public function access(ParagraphInterface $paragraph, AccountInterface $account): AccessResultInterface {
     $root = $this->root($paragraph);
-    if (!$root) {
+    if (!$root || !$root->isLatestRevision()) {
       return AccessResult::forbidden()->setCacheMaxAge(0);
     }
     $result = $root->access('update', $account, TRUE);

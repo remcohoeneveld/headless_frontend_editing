@@ -188,6 +188,12 @@ final class EditFormTest extends BrowserTestBase {
     assert($latest instanceof NodeInterface);
     $this->assertSame('Draft title', $latest->getTitle());
     $this->assertSame('draft', $latest->get('moderation_state')->value);
+
+    // Editing the published revision now would lose the draft.
+    $this->drupalGet('headless-frontend-editing/edit/en/node:' . $page->uuid() . ':title');
+    $this->assertSession()->statusCodeEquals(403);
+    $this->drupalGet('headless-frontend-editing/edit/en/node:' . $page->uuid());
+    $this->assertSession()->statusCodeEquals(403);
   }
 
   /**

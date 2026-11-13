@@ -9,6 +9,7 @@ use Drupal\headless_frontend_editing\PreviewToken;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
+use Drupal\Tests\content_moderation\Traits\ContentModerationTestTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -21,6 +22,7 @@ use Symfony\Component\HttpFoundation\Request;
 #[RunTestsInSeparateProcesses]
 final class DescribeTest extends KernelTestBase {
 
+  use ContentModerationTestTrait;
   use UserCreationTrait;
 
   /**
@@ -102,6 +104,34 @@ final class DescribeTest extends KernelTestBase {
       ['id' => "node:$uuid:title", 'lang' => 'en'],
     ]);
     $this->assertSame(["node:$uuid:title"], array_column($result, 'id'));
+  }
+
+  /**
+   * Tests that a node with a pending draft is not offered.
+   */
+  public function testPendingDraft(): void {
+    $this->enableModules(['workflows', 'content_moderation']);
+    $this->installEntitySchema('content_moderation_state');
+    $this->installConfig(['content_moderation']);
+    $workflow = $this->createEditorialWorkflow();
+    $this->addEntityTypeAndBundleToWorkflow($workflow, 'node', 'article');
+    $this->setUpCurrentUser([], [
+      'access content',
+      'edit any article content',
+      'use editorial transition create_new_draft',
+      'use editorial transition publish',
+    ]);
+    $node = Node::create(['type' => 'article', 'title' => 'Live', 'moderation_state' => 'published']);
+    $node->save();
+    $targets = [
+      ['id' => 'node:' . $node->uuid(), 'lang' => 'en'],
+      ['id' => 'node:' . $node->uuid() . ':title', 'lang' => 'en'],
+    ];
+    $this->assertCount(2, $this->describe($targets));
+
+    $node->setTitle('Draft')->set('moderation_state', 'draft')->save();
+    $this->container->get('entity_type.manager')->getStorage('node')->resetCache();
+    $this->assertSame([], $this->describe($targets));
   }
 
   /**

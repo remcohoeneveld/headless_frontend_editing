@@ -181,9 +181,8 @@ final class PreviewController extends ControllerBase {
       'frontendOrigin' => $this->origin($frontend_url),
       'path' => $path,
       'editable' => $editable,
-      // Task 6 switches these to Url::fromRoute().
-      'tokenUrl' => Url::fromUserInput('/headless-frontend-editing/token')->toString(),
-      'describeUrl' => Url::fromUserInput('/headless-frontend-editing/describe')->toString(),
+      'tokenUrl' => Url::fromRoute('headless_frontend_editing.token')->toString(),
+      'describeUrl' => Url::fromRoute('headless_frontend_editing.describe')->toString(),
     ];
     return $build;
   }

@@ -1,0 +1,6 @@
+name: 'Headless Frontend Editing test access'
+type: module
+description: 'Denies edit access to the promote field.'
+package: Testing
+hidden: true
+core_version_requirement: ^11.4 || ^12

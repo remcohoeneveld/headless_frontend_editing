@@ -5,3 +5,24 @@ headless_frontend_editing.settings:
     _title: 'Headless frontend editing'
   requirements:
     _permission: 'administer headless frontend editing'
+
+headless_frontend_editing.describe:
+  path: '/headless-frontend-editing/describe'
+  defaults:
+    _controller: '\Drupal\headless_frontend_editing\Controller\ProtocolController::describe'
+  methods: [POST]
+  requirements:
+    _permission: 'use headless frontend editing'
+    _csrf_request_header_token: 'TRUE'
+  options:
+    no_cache: true
+
+headless_frontend_editing.token:
+  path: '/headless-frontend-editing/token'
+  defaults:
+    _controller: '\Drupal\headless_frontend_editing\Controller\ProtocolController::token'
+  methods: [GET]
+  requirements:
+    _permission: 'use headless frontend editing'
+  options:
+    no_cache: true

@@ -29,3 +29,5 @@ services:
   Drupal\headless_frontend_editing\Routing\RouteSubscriber:
     tags:
       - { name: event_subscriber }
+  Drupal\headless_frontend_editing\FieldFocus: {}
+  Drupal\headless_frontend_editing\LivePreview: {}

@@ -26,3 +26,26 @@ headless_frontend_editing.token:
     _permission: 'use headless frontend editing'
   options:
     no_cache: true
+
+headless_frontend_editing.edit:
+  path: '/headless-frontend-editing/edit/{langcode}/{target}'
+  defaults:
+    _controller: '\Drupal\headless_frontend_editing\Controller\EditController::edit'
+    _title: 'Edit'
+  requirements:
+    _permission: 'use headless frontend editing'
+    _custom_access: '\Drupal\headless_frontend_editing\Controller\EditController::access'
+  options:
+    _admin_route: true
+    no_cache: true
+
+headless_frontend_editing.saved:
+  path: '/headless-frontend-editing/saved'
+  defaults:
+    _controller: '\Drupal\headless_frontend_editing\Controller\EditController::saved'
+    _title: 'Saved'
+  requirements:
+    _permission: 'use headless frontend editing'
+  options:
+    _admin_route: true
+    no_cache: true

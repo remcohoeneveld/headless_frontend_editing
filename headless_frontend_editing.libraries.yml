@@ -9,3 +9,13 @@ host:
     - core/drupal
     - core/drupalSettings
     - core/once
+
+sidebar:
+  version: VERSION
+  js:
+    js/sidebar.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupal.ajax
+    - core/jquery
+    - core/once

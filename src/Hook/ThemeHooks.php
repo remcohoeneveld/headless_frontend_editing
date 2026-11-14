@@ -6,7 +6,6 @@ namespace Drupal\headless_frontend_editing\Hook;
 
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\headless_frontend_editing\Controller\EditController;
 use Drupal\headless_frontend_editing\Controller\PreviewController;
 
 /**
@@ -19,6 +18,17 @@ final class ThemeHooks {
   ) {}
 
   /**
+   * Implements hook_theme().
+   *
+   * @return array<string, array<string, string>>
+   *   The theme hooks.
+   */
+  #[Hook('theme')]
+  public function theme(): array {
+    return ['headless_frontend_editing_sidebar' => ['render element' => 'page']];
+  }
+
+  /**
    * Implements hook_preprocess_html().
    *
    * @param array<string, mixed> $variables
@@ -26,13 +36,8 @@ final class ThemeHooks {
    */
   #[Hook('preprocess_html')]
   public function preprocessHtml(array &$variables): void {
-    $route_name = $this->routeMatch->getRouteName();
-    if (isset(PreviewController::ROUTES[$route_name])) {
+    if (isset(PreviewController::ROUTES[$this->routeMatch->getRouteName()])) {
       $variables['attributes']['class'][] = 'hfe-preview-page';
-    }
-    if (in_array($route_name, EditController::ROUTES, TRUE)) {
-      $variables['attributes']['class'][] = 'hfe-sidebar';
-      unset($variables['page_top']['toolbar']);
     }
   }
 

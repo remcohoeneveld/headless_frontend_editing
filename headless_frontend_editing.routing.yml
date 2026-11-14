@@ -36,6 +36,7 @@ headless_frontend_editing.edit:
     _permission: 'use headless frontend editing'
     _custom_access: '\Drupal\headless_frontend_editing\Controller\EditController::access'
   options:
+    _headless_frontend_editing_sidebar: true
     _admin_route: true
     no_cache: true
 
@@ -47,6 +48,7 @@ headless_frontend_editing.saved:
   requirements:
     _permission: 'use headless frontend editing'
   options:
+    _headless_frontend_editing_sidebar: true
     _admin_route: true
     no_cache: true
 

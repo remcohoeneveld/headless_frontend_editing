@@ -19,11 +19,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class EditController extends ControllerBase {
 
-  /**
-   * The routes rendered inside the sidebar iframe.
-   */
-  public const ROUTES = ['headless_frontend_editing.edit', 'headless_frontend_editing.saved'];
-
   public function __construct(
     private readonly TargetResolver $resolver,
     private readonly FieldFocus $fieldFocus,

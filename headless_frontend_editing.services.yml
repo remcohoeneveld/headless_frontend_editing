@@ -31,3 +31,6 @@ services:
       - { name: event_subscriber }
   Drupal\headless_frontend_editing\FieldFocus: {}
   Drupal\headless_frontend_editing\LivePreview: {}
+  Drupal\headless_frontend_editing\EventSubscriber\SidebarPageSubscriber:
+    tags:
+      - { name: event_subscriber }

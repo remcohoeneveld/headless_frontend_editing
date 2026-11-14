@@ -95,7 +95,7 @@ final class EditFormTest extends BrowserTestBase {
     $count = $this->revisionCount($this->node);
     $this->drupalGet('headless-frontend-editing/edit/en/node:' . $this->node->uuid() . ':title');
     $this->assertSession()->fieldNotExists('body[0][value]');
-    $this->assertSession()->elementExists('css', 'body.hfe-sidebar');
+    $this->assertSession()->elementExists('css', '.hfe-sidebar-page');
     $this->submitForm(['title[0][value]' => 'Changed'], 'Save');
     $node = $this->storage()->load($this->node->id());
     $this->assertSame('Changed', $node->getTitle());
@@ -103,7 +103,7 @@ final class EditFormTest extends BrowserTestBase {
     $this->assertStringContainsString('from the frontend preview', $node->getRevisionLogMessage());
     $this->assertSession()->addressEquals('headless-frontend-editing/saved');
     $this->assertSession()->pageTextContains('Saved. Updating the preview');
-    $this->assertSession()->elementExists('css', 'body.hfe-sidebar .hfe-saved');
+    $this->assertSession()->elementExists('css', '.hfe-sidebar-page .hfe-saved');
     $this->assertSession()->responseContains('js/sidebar.js');
   }
 

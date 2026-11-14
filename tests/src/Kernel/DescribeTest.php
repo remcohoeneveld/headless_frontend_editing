@@ -47,7 +47,7 @@ final class DescribeTest extends KernelTestBase {
     $this->installConfig(['node']);
     $this->installSchema('node', ['node_access']);
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
-    $this->node = Node::create(['type' => 'article', 'title' => 'Hello']);
+    $this->node = Node::create(['type' => 'article', 'title' => 'Hello > world']);
     $this->node->save();
   }
 
@@ -82,7 +82,9 @@ final class DescribeTest extends KernelTestBase {
     $this->assertCount(2, $result);
     $this->assertSame(['id' => 'edit', 'label' => 'Edit Title', 'disabled' => FALSE], $result[0]['actions'][0]);
     $this->assertSame('Title', $result[0]['label']);
-    $this->assertSame('Hello (Article)', $result[1]['label']);
+    // Plain text, not HTML: the client sets labels with textContent.
+    $this->assertSame('Hello > world (Article)', $result[1]['label']);
+    $this->assertSame('Edit Hello > world', $result[1]['actions'][0]['label']);
   }
 
   /**

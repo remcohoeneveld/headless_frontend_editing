@@ -9,6 +9,7 @@ headless_frontend_editing_paragraphs.add:
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
     position: 'before|after'
   options:
+    _headless_frontend_editing_sidebar: true
     _admin_route: true
     no_cache: true
 
@@ -24,6 +25,7 @@ headless_frontend_editing_paragraphs.add_form:
     position: 'before|after'
     bundle: '[a-z0-9_]+'
   options:
+    _headless_frontend_editing_sidebar: true
     _admin_route: true
     no_cache: true
 
@@ -51,5 +53,6 @@ headless_frontend_editing_paragraphs.delete:
     _custom_access: '\Drupal\headless_frontend_editing_paragraphs\Controller\ParagraphController::deleteAccess'
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
   options:
+    _headless_frontend_editing_sidebar: true
     _admin_route: true
     no_cache: true

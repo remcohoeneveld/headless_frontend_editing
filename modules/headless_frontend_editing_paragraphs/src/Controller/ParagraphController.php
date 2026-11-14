@@ -21,15 +21,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class ParagraphController extends ControllerBase {
 
-  /**
-   * The routes rendered inside the sidebar iframe.
-   */
-  public const ROUTES = [
-    'headless_frontend_editing_paragraphs.add',
-    'headless_frontend_editing_paragraphs.add_form',
-    'headless_frontend_editing_paragraphs.delete',
-  ];
-
   public function __construct(
     private readonly ParagraphTree $tree,
   ) {}

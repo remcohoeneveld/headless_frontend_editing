@@ -1,8 +1,38 @@
 .hfe-preview-page .hfe-preview {
   display: block;
   width: 100%;
+  /* host.js fits the frame to the window; this is the fallback. */
   height: calc(100vh - 8rem);
   border: 0;
+}
+
+.hfe-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  margin-block-end: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.hfe-panel__body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+
+.hfe-panel__body ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hfe-panel__body li {
+  margin: 0;
 }
 
 .hfe-panel__body[hidden],
@@ -12,6 +42,7 @@
 
 .hfe-editor {
   position: fixed;
+  z-index: 600;
   inset-block: 0;
   inset-inline-end: 0;
   inline-size: min(32rem, 100vw);

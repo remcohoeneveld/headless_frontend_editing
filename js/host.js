@@ -260,6 +260,24 @@
     },
   };
 
+  Drupal.behaviors.headlessFrontendEditingFit = {
+    attach(context) {
+      once('hfe-fit', '.hfe-preview', context).forEach((frame) => {
+        // The theme's header height is unknown: fill the window below the frame.
+        const fit = () => {
+          const top = frame.getBoundingClientRect().top + window.scrollY;
+          frame.style.height = `${Math.max(320, window.innerHeight - top)}px`;
+        };
+        fit();
+        window.addEventListener('resize', fit);
+        const panel = document.querySelector('.hfe-panel');
+        if (panel && 'ResizeObserver' in window) {
+          new ResizeObserver(fit).observe(panel);
+        }
+      });
+    },
+  };
+
   Drupal.behaviors.headlessFrontendEditingRouteSync = {
     attach(context) {
       const settings = drupalSettings.headlessFrontendEditing;

@@ -1,0 +1,18 @@
+{#
+/**
+ * @file
+ * The page of the editing sidebar: only the title, messages and content.
+ *
+ * Available variables:
+ * - page.highlighted: Status messages.
+ * - page.content: The form or other content.
+ * - page['#title']: The page title.
+ */
+#}
+<main class="hfe-sidebar-page">
+  {% if page['#title'] %}
+    <h1 class="hfe-sidebar-page__title">{{ page['#title'] }}</h1>
+  {% endif %}
+  {{ page.highlighted }}
+  {{ page.content }}
+</main>

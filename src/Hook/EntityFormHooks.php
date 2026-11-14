@@ -120,13 +120,8 @@ final class EntityFormHooks {
       ],
     ];
     $form['#entity_builders'][] = [self::class, 'newRevision'];
+    $form['#after_build'][] = [self::class, 'tidyActions'];
     $form['actions']['submit']['#submit'][] = [self::class, 'redirectToSaved'];
-    // Previewing or deleting would replace the sidebar with a full page.
-    foreach (['preview', 'delete'] as $action) {
-      if (isset($form['actions'][$action])) {
-        $form['actions'][$action]['#access'] = FALSE;
-      }
-    }
 
     $form_object = $form_state->getFormObject();
     if ($form_object instanceof EntityFormInterface && $form_object->getEntity()->getEntityTypeId() === 'node') {
@@ -144,6 +139,37 @@ final class EntityFormHooks {
         }
       }
     }
+  }
+
+  /**
+   * Leaves only the actions that fit the sidebar, at the end of the form.
+   *
+   * Done once the form is built, after every form alter: other modules add
+   * actions (a preview button), and admin themes such as Gin copy the actions
+   * into a sticky header, which the sidebar page does not have.
+   *
+   * @param array<mixed> $form
+   *   The form.
+   *
+   * @return array<mixed>
+   *   The form.
+   */
+  public static function tidyActions(array $form): array {
+    // Previewing or deleting would replace the sidebar with a full page.
+    foreach (['preview', 'delete'] as $action) {
+      if (isset($form['actions'][$action])) {
+        $form['actions'][$action]['#access'] = FALSE;
+      }
+    }
+    unset($form['gin_sticky_actions']);
+    $sticky = ['gin--has-sticky-form-actions', 'gin-sticky-form-actions'];
+    if (is_array($form['#attributes']['class'] ?? NULL)) {
+      $form['#attributes']['class'] = array_values(array_diff($form['#attributes']['class'], $sticky));
+    }
+    if (is_array($form['actions']['#attributes']['class'] ?? NULL)) {
+      $form['actions']['#attributes']['class'] = array_values(array_diff($form['actions']['#attributes']['class'], $sticky));
+    }
+    return $form;
   }
 
   /**

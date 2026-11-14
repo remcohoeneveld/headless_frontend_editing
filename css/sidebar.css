@@ -1,0 +1,14 @@
+/* The live preview button is clicked from sidebar.js only. Admin themes style
+   buttons with high specificity (Gin as an ID), which beats [hidden]. */
+.hfe-form .hfe-live {
+  display: none !important;
+}
+
+.hfe-sidebar-page {
+  padding: 1rem;
+}
+
+.hfe-sidebar-page__title {
+  margin-block: 0 1rem;
+  font-size: 1.25rem;
+}

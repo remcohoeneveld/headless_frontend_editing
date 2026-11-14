@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\headless_frontend_editing\Controller;
 
+use Drupal\Component\Utility\Html;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
@@ -72,8 +73,10 @@ final class ProtocolController extends ControllerBase {
       $description = [
         'id' => $target->id(),
         'lang' => $item['lang'],
-        'label' => (string) $label,
-        'actions' => [['id' => 'edit', 'label' => (string) $action, 'disabled' => FALSE]],
+        // Plain text: the client sets it with textContent, so undo the escaping
+        // of the @ placeholders.
+        'label' => Html::decodeEntities((string) $label),
+        'actions' => [['id' => 'edit', 'label' => Html::decodeEntities((string) $action), 'disabled' => FALSE]],
       ];
       $this->moduleHandler()->alter('headless_frontend_editing_target', $description, $target);
       $result[] = $description;

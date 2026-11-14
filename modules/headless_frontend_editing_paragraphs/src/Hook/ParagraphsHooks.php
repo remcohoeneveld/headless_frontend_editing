@@ -4,19 +4,18 @@ declare(strict_types=1);
 
 namespace Drupal\headless_frontend_editing_paragraphs\Hook;
 
+use Drupal\Component\Utility\Html;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Hook\Attribute\Hook;
-use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\TypedData\TranslatableInterface;
 use Drupal\headless_frontend_editing\Hook\EntityFormHooks;
 use Drupal\headless_frontend_editing\Target;
-use Drupal\headless_frontend_editing_paragraphs\Controller\ParagraphController;
 use Drupal\headless_frontend_editing_paragraphs\Form\ParagraphForm;
 use Drupal\headless_frontend_editing_paragraphs\ParagraphTree;
 use Drupal\paragraphs\ParagraphInterface;
@@ -30,7 +29,6 @@ final class ParagraphsHooks {
 
   public function __construct(
     private readonly ParagraphTree $tree,
-    private readonly RouteMatchInterface $routeMatch,
     private readonly ModuleExtensionList $moduleList,
     private readonly AccountInterface $currentUser,
   ) {}
@@ -64,20 +62,6 @@ final class ParagraphsHooks {
   public function libraryInfoAlter(array &$libraries, string $extension): void {
     if ($extension === 'headless_frontend_editing' && isset($libraries['host'])) {
       $libraries['host']['js']['/' . $this->moduleList->getPath('headless_frontend_editing_paragraphs') . '/js/actions.js'] = [];
-    }
-  }
-
-  /**
-   * Implements hook_preprocess_html().
-   *
-   * @param array<string, mixed> $variables
-   *   The template variables.
-   */
-  #[Hook('preprocess_html')]
-  public function preprocessHtml(array &$variables): void {
-    if (in_array($this->routeMatch->getRouteName(), ParagraphController::ROUTES, TRUE)) {
-      $variables['attributes']['class'][] = 'hfe-sidebar';
-      unset($variables['page_top']['toolbar']);
     }
   }
 
@@ -121,6 +105,11 @@ final class ParagraphsHooks {
     if ($target->fieldName !== NULL || !$paragraph instanceof ParagraphInterface || !$this->tree->load($paragraph->uuid())) {
       return;
     }
+    // The paragraph's own label names its parent and field; the type says
+    // what the section is.
+    $type = (string) $paragraph->getParagraphType()->label();
+    $description['label'] = $type;
+    $description['actions'][0]['label'] = Html::decodeEntities((string) $this->t('Edit @section', ['@section' => $type]));
     // Describe only gets here once targetAccess() allowed the paragraph.
     if (!$this->canRearrange($paragraph)) {
       return;

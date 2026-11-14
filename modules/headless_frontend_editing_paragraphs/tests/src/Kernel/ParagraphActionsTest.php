@@ -13,6 +13,7 @@ use Drupal\KernelTests\KernelTestBase;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\node\Entity\Node;
 use Drupal\paragraphs\Entity\Paragraph;
+use Drupal\paragraphs\Entity\ParagraphsType;
 use Drupal\paragraphs\ParagraphInterface;
 use Drupal\Tests\paragraphs\FunctionalJavascript\ParagraphsTestBaseTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -105,6 +106,19 @@ final class ParagraphActionsTest extends KernelTestBase {
     $this->assertFalse($actions['paragraph:' . $middle->uuid()]['down']);
     $this->assertTrue($actions['paragraph:' . $last->uuid()]['down']);
     $this->assertFalse($actions['paragraph:' . $last->uuid()]['delete']);
+  }
+
+  /**
+   * Tests that a section is labelled with its type, as plain text.
+   */
+  public function testLabel(): void {
+    ParagraphsType::load('text')->set('label', 'Text & media')->save();
+    [$section] = $this->sections(2);
+    $targets = [['id' => 'paragraph:' . $section->uuid(), 'lang' => 'en']];
+    $response = ProtocolController::create($this->container)->describe(new Request(content: json_encode(['targets' => $targets])));
+    $target = json_decode($response->getContent(), TRUE)['targets'][0];
+    $this->assertSame('Text & media', $target['label']);
+    $this->assertSame('Edit Text & media', $target['actions'][0]['label']);
   }
 
   /**

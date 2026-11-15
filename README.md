@@ -127,7 +127,7 @@ toolbar. Escape closes the sidebar; it asks before discarding unsaved changes.
   so it gets the anonymous user's access (normally a 403).
 - GraphQL results for token requests are not stored in the GraphQL results
   cache, so preview content never reaches another user.
-- The token route is a same-origin GET for the signed-in editor.
+- The token route only answers a same-origin POST from the signed-in editor, with a CSRF token in the `X-CSRF-Token` header.
 - The token provider is only listed on the JSON:API and GraphQL routes. Sites
   with subrequest-style modules should not expose routes that list all
   authentication providers, as those would accept the token too.

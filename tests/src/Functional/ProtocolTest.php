@@ -63,8 +63,21 @@ final class ProtocolTest extends BrowserTestBase {
    * Tests that anonymous users get no token.
    */
   public function testTokenAnonymous(): void {
-    $this->drupalGet('headless-frontend-editing/token');
-    $this->assertSession()->statusCodeEquals(403);
+    $this->assertSame(403, $this->postToken(NULL)[0]);
+  }
+
+  /**
+   * POSTs to the token route, with a CSRF header or without.
+   *
+   * @return array{0: int, 1: string}
+   *   The status code and the body.
+   */
+  private function postToken(?string $csrf): array {
+    $driver = $this->getSession()->getDriver();
+    assert($driver instanceof BrowserKitDriver);
+    $client = $driver->getClient();
+    $client->request('POST', $this->buildUrl('headless-frontend-editing/token'), [], [], $csrf === NULL ? [] : ['HTTP_X_CSRF_TOKEN' => $csrf]);
+    return [$client->getInternalResponse()->getStatusCode(), $client->getInternalResponse()->getContent()];
   }
 
   /**
@@ -72,10 +85,14 @@ final class ProtocolTest extends BrowserTestBase {
    */
   public function testEditor(): void {
     $this->drupalLogin($this->drupalCreateUser(['use headless frontend editing']));
+    // A GET, or a POST without the CSRF header, gets no token.
     $this->drupalGet('headless-frontend-editing/token');
-    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSession()->statusCodeNotEquals(200);
+    $this->assertSame(403, $this->postToken(NULL)[0]);
+    [$status, $body] = $this->postToken($this->drupalGet('session/token'));
+    $this->assertSame(200, $status);
     $this->assertSession()->responseHeaderContains('Cache-Control', 'no-store');
-    $this->assertNotEmpty(json_decode($this->getSession()->getPage()->getContent(), TRUE)['token']);
+    $this->assertNotEmpty(json_decode($body, TRUE)['token']);
 
     $url = $this->buildUrl('headless-frontend-editing/describe');
     $driver = $this->getSession()->getDriver();

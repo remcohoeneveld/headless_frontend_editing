@@ -10,5 +10,9 @@
   "require-dev": {
     "drupal/graphql": "^4.14 || ^5",
     "drupal/paragraphs": "^1.18"
+  },
+  "suggest": {
+    "drupal/graphql": "Preview tokens for read-only GraphQL queries (4.x or 5.x).",
+    "drupal/paragraphs": "Required by the headless_frontend_editing_paragraphs submodule."
   }
 }

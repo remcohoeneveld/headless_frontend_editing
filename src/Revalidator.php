@@ -70,6 +70,8 @@ final class Revalidator implements DestructableInterface {
         'json' => ['entities' => $entities],
         'headers' => ['X-HFE-Revalidate-Secret' => $secret],
         'timeout' => 5,
+        // A redirect would send the secret header on to another host.
+        'allow_redirects' => FALSE,
       ]);
     }
     catch (GuzzleException $e) {

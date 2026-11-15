@@ -11,11 +11,15 @@ use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\RevisionLogInterface;
+use Drupal\Core\Entity\RevisionableStorageInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldStorageDefinitionInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\content_moderation\ModerationInformationInterface;
+use Drupal\content_moderation\StateTransitionValidationInterface;
 use Drupal\paragraphs\ParagraphInterface;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
  * Finds, places and saves paragraphs in the entity they are (nested) on.
@@ -32,6 +36,8 @@ final class ParagraphTree {
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly AccountInterface $currentUser,
     private readonly TimeInterface $time,
+    private readonly ?ModerationInformationInterface $moderationInformation = NULL,
+    private readonly ?StateTransitionValidationInterface $transitionValidation = NULL,
   ) {}
 
   /**
@@ -65,11 +71,12 @@ final class ParagraphTree {
    * That changes the reference field of every parent up to the root, so it
    * needs update access to the root and edit access to each of those fields.
    * A root with a pending draft is refused: the change would be saved on the
-   * default revision and the draft lost.
+   * default revision and the draft lost. So is a root whose moderation state
+   * the account may not keep, see mayKeepState().
    */
   public function access(ParagraphInterface $paragraph, AccountInterface $account): AccessResultInterface {
     $root = $this->root($paragraph);
-    if (!$root || !$root->isLatestRevision()) {
+    if (!$root || !$root->isLatestRevision() || !$this->mayKeepState($root, $account)) {
       return AccessResult::forbidden()->setCacheMaxAge(0);
     }
     $result = $root->access('update', $account, TRUE);
@@ -79,6 +86,28 @@ final class ParagraphTree {
       $entity = $entity->getParentEntity();
     }
     return $result;
+  }
+
+  /**
+   * Whether an account may save the root again in its moderation state.
+   *
+   * Section changes save the root without its form, so they keep its state.
+   * Content Moderation checks transitions only when validating a form: for a
+   * published page, keeping it published is the publish transition, which an
+   * account that may only create drafts must not get through here.
+   */
+  public function mayKeepState(ContentEntityInterface $root, AccountInterface $account): bool {
+    if (!$this->moderationInformation || !$this->transitionValidation || !$this->moderationInformation->isModeratedEntity($root)) {
+      return TRUE;
+    }
+    $workflow = $this->moderationInformation->getWorkflowForEntity($root);
+    $type = $workflow?->getTypePlugin();
+    $state = (string) $root->get('moderation_state')->value;
+    if (!$type || !$type->hasState($state) || !$type->hasTransitionFromStateToState($state, $state)) {
+      return FALSE;
+    }
+    $current = $type->getState($state);
+    return $this->transitionValidation->isTransitionValid($workflow, $current, $current, $account, $root);
   }
 
   /**
@@ -242,8 +271,20 @@ final class ParagraphTree {
 
   /**
    * Saves the root entity as a new revision with a log message.
+   *
+   * Checks access once more: a form can be submitted from the form cache
+   * after the account lost access, or after the page got a newer revision.
+   *
+   * @throws \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException
+   *   When the account may not save the root as it is now.
    */
   public function saveRoot(ContentEntityInterface $root, string $message): void {
+    $storage = $this->entityTypeManager->getStorage($root->getEntityTypeId());
+    $stale = !$root->isNew() && $storage instanceof RevisionableStorageInterface
+      && (int) $storage->getLatestRevisionId($root->id()) !== (int) $root->getLoadedRevisionId();
+    if ($stale || !$root->access('update', $this->currentUser) || !$this->mayKeepState($root, $this->currentUser)) {
+      throw new AccessDeniedHttpException('The page may not be saved as it is now.');
+    }
     if ($root->getEntityType()->isRevisionable()) {
       $root->setNewRevision();
     }

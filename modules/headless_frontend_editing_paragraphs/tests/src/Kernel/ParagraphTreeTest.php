@@ -17,6 +17,7 @@ use Drupal\Tests\paragraphs\FunctionalJavascript\ParagraphsTestBaseTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
  * Tests finding, placing and saving paragraphs in their root entity.
@@ -101,7 +102,7 @@ final class ParagraphTreeTest extends KernelTestBase {
    * Tests inserting a new paragraph before and after an anchor.
    */
   public function testInsertBeforeAfter(): void {
-    $this->setUpCurrentUser();
+    $this->setUpCurrentUser([], ['access content', 'edit any page content']);
     foreach (['before' => [2, 0, 1], 'after' => [0, 2, 1]] as $position => $expected) {
       [$node, $a, $b] = $this->page();
       $new = Paragraph::create(['type' => 'text']);
@@ -117,7 +118,7 @@ final class ParagraphTreeTest extends KernelTestBase {
    */
   public function testMoveBounds(): void {
     [$node, $a, $b] = $this->page();
-    $this->setUpCurrentUser();
+    $this->setUpCurrentUser([], ['access content', 'edit any page content']);
     $this->assertFalse($this->tree->move(Paragraph::load($a->id()), 'up'));
     $this->assertSame([(int) $a->id(), (int) $b->id()], $this->order($node));
     $this->assertTrue($this->tree->move(Paragraph::load($a->id()), 'down'));
@@ -129,7 +130,7 @@ final class ParagraphTreeTest extends KernelTestBase {
    */
   public function testSaveRootRevision(): void {
     [$node] = $this->page();
-    $user = $this->setUpCurrentUser();
+    $user = $this->setUpCurrentUser([], ['access content', 'edit any page content']);
     $revision = (int) $node->getRevisionId();
     $this->tree->saveRoot($node, 'Reordered sections from the frontend preview.');
     $storage = $this->container->get('entity_type.manager')->getStorage('node');
@@ -141,6 +142,30 @@ final class ParagraphTreeTest extends KernelTestBase {
     $this->assertGreaterThan($revision, (int) $node->getRevisionId());
     $this->assertSame('Reordered sections from the frontend preview.', $node->getRevisionLogMessage());
     $this->assertSame($user->id(), $node->getRevisionUserId());
+  }
+
+  /**
+   * Tests that saving the root refuses a copy older than its latest revision.
+   *
+   * A form submitted from the form cache carries the page as it was then.
+   */
+  public function testSaveRootRefusesStale(): void {
+    [$node] = $this->page();
+    $this->setUpCurrentUser([], ['access content', 'edit any page content']);
+    $stale = Node::load($node->id());
+    $this->tree->saveRoot($this->container->get('entity_type.manager')->getStorage('node')->loadUnchanged($node->id()), 'First.');
+    $this->expectException(AccessDeniedHttpException::class);
+    $this->tree->saveRoot($stale, 'Second, from the old copy.');
+  }
+
+  /**
+   * Tests that saving the root needs update access.
+   */
+  public function testSaveRootNeedsAccess(): void {
+    [$node] = $this->page();
+    $this->setUpCurrentUser([], ['access content']);
+    $this->expectException(AccessDeniedHttpException::class);
+    $this->tree->saveRoot($node, 'Not allowed.');
   }
 
   /**

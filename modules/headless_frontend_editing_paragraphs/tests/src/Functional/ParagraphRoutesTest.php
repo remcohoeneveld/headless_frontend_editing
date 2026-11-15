@@ -7,6 +7,7 @@ namespace Drupal\Tests\headless_frontend_editing_paragraphs\Functional;
 use Drupal\Core\Url;
 use GuzzleHttp\RequestOptions;
 use Drupal\headless_frontend_editing_paragraphs_test\Hook\LockedFieldHooks;
+use Drupal\headless_frontend_editing_paragraphs_test\Hook\LockedTargetHooks;
 use Drupal\headless_frontend_editing_paragraphs_test\Hook\ParagraphAccessHooks;
 use Drupal\node\NodeInterface;
 use Drupal\paragraphs\Entity\Paragraph;
@@ -103,11 +104,20 @@ final class ParagraphRoutesTest extends BrowserTestBase {
   }
 
   /**
-   * POSTs a move, with or without a CSRF token.
+   * POSTs a move, with or without a CSRF token, for the page being edited.
+   *
+   * @param string $direction
+   *   Up or down.
+   * @param bool $token
+   *   Whether to send the CSRF token.
+   * @param string|null $root
+   *   The page the move names; NULL for the section's own page.
    */
-  private function move(string $direction, bool $token): int {
+  private function move(string $direction, bool $token, ?string $root = NULL): int {
     $parameters = ['uuid' => $this->first->uuid(), 'direction' => $direction];
-    $url = Url::fromRoute('headless_frontend_editing_paragraphs.move', $parameters)->setAbsolute()->toString();
+    $url = Url::fromRoute('headless_frontend_editing_paragraphs.move', $parameters, [
+      'query' => ['root' => $root ?? 'node:' . $this->node->uuid()],
+    ])->setAbsolute()->toString();
     $headers = [];
     if ($token) {
       $this->drupalGet('session/token');
@@ -128,6 +138,10 @@ final class ParagraphRoutesTest extends BrowserTestBase {
     $this->login();
     $revision = (int) $this->node->getRevisionId();
     $this->assertSame(403, $this->move('down', FALSE));
+    $this->assertSame(['First', 'Second'], $this->texts());
+    // A move must name the page the section is on.
+    $this->assertSame(403, $this->move('down', TRUE, 'node:' . $this->container->get('uuid')->generate()));
+    $this->assertSame(403, $this->move('down', TRUE, ''));
     $this->assertSame(['First', 'Second'], $this->texts());
     $this->assertSame(200, $this->move('down', TRUE));
     $this->assertSame(['Second', 'First'], $this->texts());
@@ -350,6 +364,59 @@ final class ParagraphRoutesTest extends BrowserTestBase {
     }
     $this->assertSame(403, $this->move('down', TRUE));
     $this->assertSame(['First', 'Second'], $this->texts());
+  }
+
+  /**
+   * Tests that a section locked by the target access hook stays put.
+   */
+  public function testLockedTarget(): void {
+    $uuid = $this->first->uuid();
+    \Drupal::state()->set(LockedTargetHooks::STATE, "paragraph:$uuid");
+    $this->login();
+    foreach ([
+      Url::fromRoute('headless_frontend_editing_paragraphs.add', ['uuid' => $uuid, 'position' => 'before']),
+      Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $uuid]),
+    ] as $url) {
+      $this->drupalGet($url);
+      $this->assertSession()->statusCodeEquals(403);
+    }
+    $this->assertSame(403, $this->move('down', TRUE));
+    $this->assertSame(['First', 'Second'], $this->texts());
+  }
+
+  /**
+   * Tests that section routes need the transition that keeps a page's state.
+   *
+   * They save the page without its form, so keeping a published page
+   * published needs the publish transition, not just create_new_draft.
+   */
+  public function testModerationStateKept(): void {
+    $this->createEditorialWorkflow('page');
+    $this->reload()->set('moderation_state', 'published')->save();
+    $permissions = [
+      'access content',
+      'use headless frontend editing',
+      'edit any page content',
+      "use {$this->workflow->id()} transition create_new_draft",
+    ];
+    $this->drupalLogin($this->drupalCreateUser($permissions));
+    $uuid = $this->first->uuid();
+    foreach ([
+      Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => "paragraph:$uuid"]),
+      Url::fromRoute('headless_frontend_editing_paragraphs.add', ['uuid' => $uuid, 'position' => 'before']),
+      Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $uuid]),
+      $this->orderUrl(),
+    ] as $url) {
+      $this->drupalGet($url);
+      $this->assertSession()->statusCodeEquals(403);
+    }
+    $this->assertSame(403, $this->move('down', TRUE));
+    $this->assertSame(['First', 'Second'], $this->texts());
+
+    $permissions[] = "use {$this->workflow->id()} transition publish";
+    $this->drupalLogin($this->drupalCreateUser($permissions));
+    $this->assertSame(200, $this->move('down', TRUE));
+    $this->assertSame(['Second', 'First'], $this->texts());
   }
 
   /**

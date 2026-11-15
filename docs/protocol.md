@@ -8,7 +8,7 @@ iframe and talks to `client.js` in it with `postMessage`. Every message has
 |---|---|---|
 | frontend to Drupal | `hfe:ready` | `{targets: [{id, lang}]}` |
 | frontend to Drupal | `hfe:action` | `{target, lang, action}`; action is `edit`, `up`, `down`, `delete`, `add-before` or `add-after` |
-| frontend to Drupal | `hfe:navigate` | `{path}`, only `^/(?!/)` |
+| frontend to Drupal | `hfe:navigate` | `{path}`, a same-origin path (parsed with `URL`, not matched) |
 | Drupal to frontend | `hfe:describe` | `{targets: [{id, lang, label, actions: [{id, label, disabled}]}]}` |
 | Drupal to frontend | `hfe:show` | `{path, token}` |
 | sidebar to host (same origin) | `hfe:live` | `{path}`, only `^/(?:[a-z]{2,3}(?:-[a-z0-9]+)?/)?node/preview/[\w-]+/full$` (language prefix allowed) |
@@ -33,7 +33,7 @@ or an ancestor, else `<html lang>`.
 |---|---|
 | `/headless-frontend-editing/client.js` | the overlay client (public, max-age=300, ETag) |
 | `/headless-frontend-editing/describe` | POST, CSRF header; describes targets |
-| `/headless-frontend-editing/token` | GET; fresh preview token for the signed-in editor |
+| `/headless-frontend-editing/token` | POST with `X-CSRF-Token`; fresh preview token for the signed-in editor |
 | `/headless-frontend-editing/edit/{langcode}/{target}` | the edit form in the sidebar |
 | `/headless-frontend-editing/saved` | shown after saving |
 | `/headless-frontend-editing/paragraph/{uuid}/…` | submodule: add, delete |

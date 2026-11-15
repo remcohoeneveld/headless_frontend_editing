@@ -2,4 +2,8 @@
 services:
   _defaults:
     autowire: true
-  Drupal\headless_frontend_editing_paragraphs\ParagraphTree: {}
+  Drupal\headless_frontend_editing_paragraphs\ParagraphTree:
+    arguments:
+      # Content Moderation is optional.
+      $moderationInformation: '@?content_moderation.moderation_information'
+      $transitionValidation: '@?content_moderation.state_transition_validation'

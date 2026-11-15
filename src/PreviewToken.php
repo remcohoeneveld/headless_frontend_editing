@@ -52,9 +52,12 @@ final class PreviewToken {
 
   /**
    * Signs a payload with the site private key and hash salt.
+   *
+   * Prefixed: core's CSRF tokens use the same key, and a signature for one
+   * must never be valid for the other.
    */
   private function sign(string $payload): string {
-    return Crypt::hmacBase64($payload, $this->privateKey->get() . Settings::getHashSalt());
+    return Crypt::hmacBase64('headless_frontend_editing.preview:' . $payload, $this->privateKey->get() . Settings::getHashSalt());
   }
 
 }

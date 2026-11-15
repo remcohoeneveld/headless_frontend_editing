@@ -52,18 +52,22 @@ final class PreviewTokenAuth implements AuthenticationProviderInterface {
    * {@inheritdoc}
    */
   public function authenticate(Request $request): ?AccountInterface {
+    // The token first: it is cheap to check, and a request without a valid
+    // one never reaches the GraphQL parser here.
+    $uid = $this->previewToken->validate((string) $request->headers->get(self::HEADER));
+    if (!$uid) {
+      return NULL;
+    }
     $read_only = $this->isGraphqlEndpoint($request)
       ? $this->isGraphqlQuery($request)
       : in_array($request->getMethod(), ['GET', 'HEAD'], TRUE);
     if (!$read_only) {
       return NULL;
     }
-    $uid = $this->previewToken->validate((string) $request->headers->get(self::HEADER));
-    if (!$uid) {
-      return NULL;
-    }
     $user = $this->entityTypeManager->getStorage('user')->load($uid);
-    if (!$user instanceof UserInterface || !$user->isActive()) {
+    // Checked on every request: a token stops working once its user is
+    // blocked or loses the permission, not only when it expires.
+    if (!$user instanceof UserInterface || !$user->isActive() || !$user->hasPermission('use headless frontend editing')) {
       return NULL;
     }
     // Core does not record the provider; the post-routing check needs it.

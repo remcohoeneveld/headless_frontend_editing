@@ -21,9 +21,12 @@ headless_frontend_editing.token:
   path: '/headless-frontend-editing/token'
   defaults:
     _controller: '\Drupal\headless_frontend_editing\Controller\ProtocolController::token'
-  methods: [GET]
+  # POST with a CSRF header: a site whose CORS settings allow credentials
+  # from other origins still never hands them a token.
+  methods: [POST]
   requirements:
     _permission: 'use headless frontend editing'
+    _csrf_request_header_token: 'TRUE'
   options:
     no_cache: true
 

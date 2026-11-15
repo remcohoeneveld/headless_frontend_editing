@@ -6,8 +6,10 @@
 /**
  * @param {object} Drupal
  *   The Drupal global.
+ * @param {object} drupalSettings
+ *   The Drupal settings.
  */
-((Drupal) => {
+((Drupal, drupalSettings) => {
   const PARAGRAPH = /^paragraph:([0-9a-f-]{36})$/;
 
   const hfe = Drupal.headlessFrontendEditing || {};
@@ -41,15 +43,26 @@
 
   ['up', 'down'].forEach((direction) => {
     hfe.actions[direction] = (target) => {
+      const { root } = drupalSettings.headlessFrontendEditing || {};
       const move = url(target, `move/${direction}`);
-      if (!move || !hfe.confirmDiscard()) {
+      // Saved without a form to confirm: only right after a real click or key
+      // press, which a script in the preview cannot fake.
+      if (
+        !move ||
+        !root ||
+        navigator.userActivation?.isActive === false ||
+        !hfe.confirmDiscard()
+      ) {
         return;
       }
       fetch(Drupal.url('session/token'))
         .then(ok)
         .then((response) => response.text())
         .then((token) =>
-          fetch(move, { method: 'POST', headers: { 'X-CSRF-Token': token } }),
+          fetch(`${move}?root=${encodeURIComponent(root)}`, {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': token },
+          }),
         )
         .then(ok)
         .then(() => {
@@ -75,4 +88,4 @@
       }
     };
   });
-})(Drupal);
+})(Drupal, drupalSettings);

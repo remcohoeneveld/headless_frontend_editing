@@ -80,7 +80,8 @@ Next.js is in `examples/nextjs`.
    an ETag. Web servers that serve `*.js` as static files (some nginx
    configurations) must pass this path to Drupal.
 3. **Headers on the preview route.** `Content-Security-Policy: frame-ancestors
-   <drupal-origin>` and `Referrer-Policy: no-referrer`.
+   <drupal-origin>` and `Referrer-Policy: no-referrer`. No analytics or tag
+   manager on that route: the URL carries the preview token.
 4. **Revalidate endpoint.** Drupal POSTs to internal URL + revalidate path with
    header `X-HFE-Revalidate-Secret` and body
    `{"entities":[{"type":"node","uuid":"…","langcode":"en"}]}` after a request
@@ -111,6 +112,13 @@ toolbar. Escape closes the sidebar; it asks before discarding unsaved changes.
 
 ## Security
 
+- The token travels in the preview route's query string, because the
+  frontend's server needs it. Load no third-party scripts on that route
+  (analytics and tag managers send the full URL to their servers), and keep
+  its query string out of access logs.
+- Everything on the frontend origin is trusted with the editor's preview: a
+  script there can open the editing forms and move sections of the page shown
+  (moves need a real click and must name that page).
 - The token (`{uid}.{expires}.{hmac}`, 10 minutes) is read-only. Send
   `X-HFE-Preview-Token` only to the JSON:API and GraphQL endpoint. Other Drupal
   routes answer 403 when the header is present.

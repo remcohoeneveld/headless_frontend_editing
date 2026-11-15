@@ -184,6 +184,9 @@ final class PreviewController extends ControllerBase {
       'frontendOrigin' => $this->origin($frontend_url),
       'path' => $path,
       'editable' => $editable,
+      // The page shown: section moves name it, so a script in the preview
+      // cannot move sections of other pages.
+      'root' => 'node:' . $node->uuid(),
       'tokenUrl' => Url::fromRoute('headless_frontend_editing.token')->toString(),
       'describeUrl' => Url::fromRoute('headless_frontend_editing.describe')->toString(),
     ];

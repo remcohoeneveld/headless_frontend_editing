@@ -120,7 +120,14 @@
    *   The frontend path.
    */
   const show = (path) => {
-    fetch(settings().tokenUrl, { cache: 'no-store' })
+    csrf()
+      .then((csrfToken) =>
+        fetch(settings().tokenUrl, {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { 'X-CSRF-Token': csrfToken },
+        }),
+      )
       .then(ok)
       .then((response) => response.json())
       .then(({ token }) => toFrontend({ type: 'hfe:show', path, token }))
@@ -363,15 +370,28 @@
             data.v !== 1 ||
             data.type !== 'hfe:navigate' ||
             typeof data.path !== 'string' ||
-            !/^\/(?![/\\])/.test(data.path) ||
-            drupalSettings.path.baseUrl.replace(/\/$/, '') + data.path ===
-              window.location.pathname
+            !data.path.startsWith('/')
           ) {
             return;
           }
-          window.location.assign(
-            drupalSettings.path.baseUrl.replace(/\/$/, '') + data.path,
-          );
+          // Parsed, not matched: the URL parser drops tabs and newlines, so
+          // "/\t/evil.com" would become "//evil.com", another site.
+          let url;
+          try {
+            url = new URL(
+              drupalSettings.path.baseUrl.replace(/\/$/, '') + data.path,
+              window.location.origin,
+            );
+          } catch (e) {
+            return;
+          }
+          if (
+            url.origin !== window.location.origin ||
+            url.pathname === window.location.pathname
+          ) {
+            return;
+          }
+          window.location.assign(url.pathname);
         });
       });
     },

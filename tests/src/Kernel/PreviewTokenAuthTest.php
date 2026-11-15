@@ -104,6 +104,7 @@ final class PreviewTokenAuthTest extends KernelTestBase {
       'access content',
       'bypass node access',
       'execute preview arbitrary graphql requests',
+      'use headless frontend editing',
     ]);
     $this->node = Node::create([
       'type' => 'article',
@@ -111,6 +112,15 @@ final class PreviewTokenAuthTest extends KernelTestBase {
       'status' => NodeInterface::NOT_PUBLISHED,
     ]);
     $this->node->save();
+  }
+
+  /**
+   * A token stops working once its user loses the editing permission.
+   */
+  public function testTokenNeedsPermission(): void {
+    $reader = $this->createUser(['access content', 'bypass node access']);
+    $response = $this->request('GET', $this->jsonApiPath(), $this->token($reader));
+    $this->assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
   }
 
   /**

@@ -11,12 +11,15 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
 use Drupal\headless_frontend_editing\Hook\EntityFormHooks;
+use Drupal\headless_frontend_editing\Target;
 use Drupal\headless_frontend_editing\TargetResolver;
 use Drupal\headless_frontend_editing_paragraphs\Form\SectionOrderForm;
 use Drupal\headless_frontend_editing_paragraphs\ParagraphTree;
 use Drupal\paragraphs\ParagraphInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -96,9 +99,18 @@ final class ParagraphController extends ControllerBase {
 
   /**
    * Swaps a section with its neighbor.
+   *
+   * Moves save at once, without a form to confirm, so the request must name
+   * the page the editor has open (?root=node:<uuid>): a script on the
+   * frontend could otherwise move sections of any page the editor may edit.
    */
-  public function move(string $uuid, string $direction): JsonResponse {
-    return new JsonResponse(['moved' => $this->tree->move($this->load($uuid), $direction)]);
+  public function move(string $uuid, string $direction, Request $request): JsonResponse {
+    $paragraph = $this->load($uuid);
+    $root = $this->tree->root($paragraph);
+    if (!$root || $request->query->get('root') !== $root->getEntityTypeId() . ':' . $root->uuid()) {
+      throw new AccessDeniedHttpException('The section is not on the page being edited.');
+    }
+    return new JsonResponse(['moved' => $this->tree->move($paragraph, $direction)]);
   }
 
   /**
@@ -113,18 +125,20 @@ final class ParagraphController extends ControllerBase {
   }
 
   /**
-   * Checks update access to the root and edit access to the section fields.
+   * Checks access to the section as a target, see TargetResolver::access().
    *
-   * Sections are changed in their own language, which is the page's language
-   * in that translation. Unknown sections are let through, so the route can
-   * answer 404.
+   * That is update access to the root and edit access to the section fields
+   * (ParagraphTree::access(), through this module's target access hook), and
+   * every other module's hook_headless_frontend_editing_target_access(), so a
+   * section a site locks cannot be moved, deleted or added next to either.
+   * Unknown sections are let through, so the route can answer 404.
    */
   public function access(AccountInterface $account, string $uuid): AccessResultInterface {
     $paragraph = $this->tree->load($uuid);
     if (!$paragraph) {
       return AccessResult::allowed()->setCacheMaxAge(0);
     }
-    $result = $this->tree->access($paragraph, $account);
+    $result = $this->resolver->access(new Target($paragraph), $account);
     return $result->isAllowed() ? $result : AccessResult::forbidden()->addCacheableDependency($result);
   }
 
@@ -152,7 +166,7 @@ final class ParagraphController extends ControllerBase {
       return AccessResult::allowed()->setCacheMaxAge(0);
     }
     $result = $this->resolver->access($resolved, $account);
-    return $result->isAllowed() && $this->tree->sectionFields($resolved->entity, $account)
+    return $result->isAllowed() && $this->tree->sectionFields($resolved->entity, $account) && $this->tree->mayKeepState($resolved->entity, $account)
       ? $result
       : AccessResult::forbidden()->addCacheableDependency($result)->setCacheMaxAge(0);
   }

@@ -6,6 +6,11 @@ add:
 
 order:
   version: VERSION
+  js:
+    js/order.js: {}
   css:
     theme:
       css/order.css: {}
+  dependencies:
+    - core/drupal.tabledrag
+    - headless_frontend_editing/sidebar

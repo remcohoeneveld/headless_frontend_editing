@@ -51,28 +51,40 @@ final class LivePreview {
         $this->messenger->addError($error);
       }
     }
-    $response = new AjaxResponse();
     $form_object = $form_state->getFormObject();
     assert($form_object instanceof EntityFormInterface);
     $entity = $form_object->buildEntity($form, $form_state);
     assert($entity instanceof ContentEntityInterface);
     $root = $this->moduleHandler->invokeAll('headless_frontend_editing_preview_root', [$entity, $form_state])[0] ?? $entity;
     if (!$root instanceof Node) {
-      return $response;
+      return new AjaxResponse();
     }
 
+    return $this->show($root, self::key($entity));
+  }
+
+  /**
+   * Stores a node as a preview and tells the sidebar to show it.
+   */
+  public function show(Node $root, string $key): AjaxResponse {
     // The same structure NodeForm::preview() stores, so core's node_preview
     // parameter converter loads it.
     $root->in_preview = TRUE;
     $preview = (new FormState())->setFormObject(
       $this->entityTypeManager->getFormObject('node', 'default')->setEntity($root),
     );
-    $key = self::key($entity);
     $this->tempStoreFactory->get('node_preview')->set($key, $preview);
 
     $path = Url::fromRoute('entity.node.preview', ['node_preview' => $key, 'view_mode_id' => 'full'])->toString();
     $path = PreviewController::withoutBasePath($path, $this->requestStack->getCurrentRequest()->getBasePath());
-    return $response->addCommand(new LivePreviewCommand($path));
+    return (new AjaxResponse())->addCommand(new LivePreviewCommand($path));
+  }
+
+  /**
+   * Removes the preview of an edited entity.
+   */
+  public function delete(EntityInterface $entity): void {
+    $this->tempStoreFactory->get('node_preview')->delete(self::key($entity));
   }
 
   /**

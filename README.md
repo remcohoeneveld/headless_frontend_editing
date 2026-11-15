@@ -19,7 +19,8 @@ overlay client, the forms and the access checks.
 - On-demand revalidation of the frontend after content changes.
 
 Submodule `headless_frontend_editing_paragraphs` adds and deletes Paragraphs
-sections, and adds a "Page layout" view to reorder them by dragging.
+sections, and adds a "Page layout" view to reorder them by dragging; the
+preview shows each new order before it is saved.
 
 ## Requirements
 

@@ -6,13 +6,16 @@ namespace Drupal\headless_frontend_editing_paragraphs\Form;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\Unicode;
+use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
+use Drupal\headless_frontend_editing\LivePreview;
 use Drupal\headless_frontend_editing\Target;
 use Drupal\headless_frontend_editing\TargetResolver;
 use Drupal\headless_frontend_editing_paragraphs\ParagraphTree;
+use Drupal\node\Entity\Node;
 use Drupal\paragraphs\ParagraphInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -37,13 +40,18 @@ final class SectionOrderForm extends FormBase {
   public function __construct(
     protected ParagraphTree $tree,
     protected TargetResolver $resolver,
+    protected LivePreview $livePreview,
   ) {}
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get(ParagraphTree::class), $container->get(TargetResolver::class));
+    return new static(
+      $container->get(ParagraphTree::class),
+      $container->get(TargetResolver::class),
+      $container->get(LivePreview::class),
+    );
   }
 
   /**
@@ -84,6 +92,7 @@ final class SectionOrderForm extends FormBase {
     $this->entity = $resolved->entity ?? throw new NotFoundHttpException();
     $fields = $this->tree->sectionFields($this->entity, $this->currentUser());
     $form['fields'] = ['#tree' => TRUE];
+    $form['#attributes']['class'][] = 'hfe-form';
     $form['#attached']['library'][] = 'headless_frontend_editing_paragraphs/order';
     foreach ($fields as $name => $items) {
       $paragraphs = array_filter($items->referencedEntities(), fn ($paragraph) => $paragraph instanceof ParagraphInterface);
@@ -122,6 +131,21 @@ final class SectionOrderForm extends FormBase {
           '#attributes' => ['class' => ['hfe-order__add']],
         ];
       }
+    }
+    if ($this->entity instanceof Node) {
+      // Shows the new order in the preview after each drop; see order.js.
+      $form['hfe_live'] = [
+        '#type' => 'button',
+        '#name' => 'hfe_live',
+        '#value' => $this->t('Update preview'),
+        '#attributes' => ['class' => ['hfe-live'], 'hidden' => TRUE],
+        '#ajax' => [
+          'callback' => '::livePreview',
+          'event' => 'hfe:live',
+          'disable-refocus' => TRUE,
+          'progress' => ['type' => 'none'],
+        ],
+      ];
     }
     $form['actions'] = [
       '#type' => 'actions',
@@ -227,6 +251,10 @@ final class SectionOrderForm extends FormBase {
    *   The form state.
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
+    // The form object may come from the form cache (the live preview button
+    // is an #ajax element): compare with, and save onto, the page as it is now.
+    [$langcode, $target] = $form_state->getBuildInfo()['args'] + [NULL, NULL];
+    $this->entity = self::resolve($this->resolver, (string) $target, (string) $langcode)->entity ?? throw new NotFoundHttpException();
     foreach (array_keys($form['fields']) as $name) {
       if (is_string($name) && $name[0] !== '#' && $form_state->getValue(['fields', $name, 'ids']) !== implode(',', $this->ids($name))) {
         $form_state->setErrorByName('fields', $this->t('The page changed since you opened this view. Reload and try again.'));
@@ -244,9 +272,40 @@ final class SectionOrderForm extends FormBase {
    *   The form state.
    */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
+    if ($this->reorder($this->entity, $form_state)) {
+      $this->tree->saveRoot($this->entity, (string) $this->t('Reordered sections from the frontend preview.'));
+    }
+    $this->livePreview->delete($this->entity);
+    $form_state->setRedirect('headless_frontend_editing.saved');
+  }
+
+  /**
+   * Ajax callback: shows the page in the dragged order, unsaved.
+   *
+   * @param array<string, mixed> $form
+   *   The form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   */
+  public function livePreview(array &$form, FormStateInterface $form_state): AjaxResponse {
+    $node = clone $this->entity;
+    if (!$node instanceof Node || $form_state->hasAnyErrors()) {
+      return new AjaxResponse();
+    }
+    $this->reorder($node, $form_state);
+    return $this->livePreview->show($node, LivePreview::key($node));
+  }
+
+  /**
+   * Puts the sections of an entity in the submitted order.
+   *
+   * @return bool
+   *   Whether the order changed.
+   */
+  private function reorder(ContentEntityInterface $entity, FormStateInterface $form_state): bool {
     $changed = FALSE;
     foreach ($form_state->getValue('fields') ?: [] as $name => $values) {
-      $items = $this->entity->get($name);
+      $items = $entity->get($name);
       $old = $items->getValue();
       $weights = [];
       foreach ($old as $delta => $value) {
@@ -260,10 +319,7 @@ final class SectionOrderForm extends FormBase {
         $changed = TRUE;
       }
     }
-    if ($changed) {
-      $this->tree->saveRoot($this->entity, (string) $this->t('Reordered sections from the frontend preview.'));
-    }
-    $form_state->setRedirect('headless_frontend_editing.saved');
+    return $changed;
   }
 
 }

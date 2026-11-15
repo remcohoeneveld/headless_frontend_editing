@@ -109,6 +109,8 @@
   // Retry delays for hfe:ready until Drupal first answers: the host page may
   // not be listening yet when this frame starts.
   const RETRIES = [500, 1000, 2000, 4000, 8000];
+  // How long the pointer may cross another target on its way to the toolbar.
+  const SWITCH_DELAY = 300;
 
   const post = (message) => {
     window.parent.postMessage({ v: 1, ...message }, drupalOrigin);
@@ -264,20 +266,30 @@
       place();
     };
 
+    // The toolbar sits above its target, over the edge of the section before
+    // it: moving up to it crosses that section, which must not take over.
+    let pending;
     const point = (event) => {
+      clearTimeout(pending);
       // Events from inside the toolbar report its host as target, and focus
       // in the toolbar keeps it open.
       if (event.target === host || shadow.activeElement) {
         return;
       }
       const element = describedAt(event.target);
-      if (element !== current) {
+      if (element === current) {
+        return;
+      }
+      if (current && event.type === 'mouseover') {
+        pending = setTimeout(() => show(element), SWITCH_DELAY);
+      } else {
         show(element);
       }
     };
     document.addEventListener('mouseover', point);
     document.addEventListener('focusin', point);
     document.documentElement.addEventListener('mouseleave', () => {
+      clearTimeout(pending);
       if (!shadow.activeElement) {
         show(null);
       }

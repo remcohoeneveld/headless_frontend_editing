@@ -8,6 +8,7 @@ use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
 use Drupal\headless_frontend_editing\Hook\EntityFormHooks;
 use Drupal\headless_frontend_editing\TargetResolver;
@@ -94,10 +95,13 @@ final class ParagraphController extends ControllerBase {
 
   /**
    * Returns the title of the add form.
+   *
+   * Markup, not a string: @section is escaped already, and Drupal escapes a
+   * plain string title once more ("Text &amp;amp; Socials").
    */
-  public function addTitle(string $bundle): string {
+  public function addTitle(string $bundle): TranslatableMarkup {
     $type = $this->entityTypeManager()->getStorage('paragraphs_type')->load($bundle);
-    return (string) $this->t('Add @section', ['@section' => $type?->label() ?? $bundle]);
+    return $this->t('Add @section', ['@section' => $type?->label() ?? $bundle]);
   }
 
   /**

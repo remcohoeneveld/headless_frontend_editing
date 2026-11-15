@@ -202,7 +202,9 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $this->enterFrame('hfe-preview');
     $this->assertSession()->waitForElement('css', 'h1');
     $href = $other->toUrl()->toString();
-    $this->getSession()->executeScript("const a = document.createElement('a'); a.href = '$href'; a.textContent = 'Other page'; document.body.append(a);");
+    // A frontend path, without Drupal's base path (/web/ on drupal.org CI).
+    $path = '/' . $other->toUrl()->getInternalPath();
+    $this->getSession()->executeScript("const a = document.createElement('a'); a.href = '$path'; a.textContent = 'Other page'; document.body.append(a);");
     $this->getSession()->getPage()->clickLink('Other page');
     $this->getSession()->switchToIFrame();
     $this->assertTrue($this->getSession()->wait(5000, "window.location.pathname === '$href'"));
@@ -225,7 +227,8 @@ final class EditInPreviewTest extends WebDriverTestBase {
 
     $this->enterFrame('hfe-preview');
     $href = $other->toUrl()->toString();
-    $this->getSession()->executeScript("const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); const a = document.createElementNS('http://www.w3.org/2000/svg', 'a'); a.setAttribute('href', '$href'); const t = document.createElementNS('http://www.w3.org/2000/svg', 'text'); a.append(t); svg.append(a); document.body.append(svg); t.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, button: 0}));");
+    $path = '/' . $other->toUrl()->getInternalPath();
+    $this->getSession()->executeScript("const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); const a = document.createElementNS('http://www.w3.org/2000/svg', 'a'); a.setAttribute('href', '$path'); const t = document.createElementNS('http://www.w3.org/2000/svg', 'text'); a.append(t); svg.append(a); document.body.append(svg); t.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, button: 0}));");
     $this->getSession()->switchToIFrame();
     $this->assertTrue($this->getSession()->wait(5000, "window.location.pathname === '$href'"));
   }

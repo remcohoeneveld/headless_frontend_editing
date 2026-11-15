@@ -461,6 +461,12 @@
           }
         });
         restoreMoved();
+        // The pointer may already rest on a target that had no description
+        // when it arrived; mouseover will not fire again until it moves.
+        const hovered = [...document.querySelectorAll(':hover')].pop();
+        if (!current && hovered) {
+          point({ target: hovered, type: 'mouseover' });
+        }
       } else if (
         data.type === 'hfe:show' &&
         typeof data.path === 'string' &&

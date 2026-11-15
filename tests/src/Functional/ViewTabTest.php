@@ -61,7 +61,7 @@ final class ViewTabTest extends BrowserTestBase {
     $this->drupalGet('node/1');
     $src = $this->iframeSrc();
     $this->assertStringStartsWith('https://front.example/drupal-preview?', $src);
-    $this->assertStringContainsString('path=%2Fnode%2F1', $src);
+    $this->assertStringContainsString('path=' . rawurlencode('/node/1'), $src);
     $this->assertStringContainsString('token=', $src);
     $this->assertStringContainsString('edit=1', $src);
     $this->assertSession()->elementExists('css', '.hfe-editor[hidden][aria-labelledby="hfe-editor-title"]');

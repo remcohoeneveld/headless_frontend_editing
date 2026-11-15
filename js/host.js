@@ -370,7 +370,8 @@
             data.v !== 1 ||
             data.type !== 'hfe:navigate' ||
             typeof data.path !== 'string' ||
-            !data.path.startsWith('/')
+            !data.path.startsWith('/') ||
+            /[\\\s]/.test(data.path)
           ) {
             return;
           }

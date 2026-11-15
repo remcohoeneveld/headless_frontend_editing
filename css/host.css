@@ -6,114 +6,151 @@
   --hfe-line: var(--gin-border-color, #e3e4e8);
   --hfe-hover: var(--gin-bg-item-hover, #f0f1f4);
   --hfe-focus: #6e56ff;
+  /* The dock shares its ink with the section toolbar in the preview. */
+  --hfe-dock: #17191f;
+  /* The admin bars: Gin's toolbar variables, or core's displace offsets. */
+  --hfe-top: max(var(--gin-toolbar-y-offset, 0px), var(--drupal-displace-offset-top, 0px));
+  --hfe-left: max(var(--gin-toolbar-x-offset, 0px), var(--drupal-displace-offset-left, 0px));
+  --hfe-right: 0px;
 }
 
+/* An open sidebar narrows the site, so the section stays next to its form. */
+.hfe-preview-page:has(.hfe-editor:not([hidden])) {
+  --hfe-right: min(30rem, 100vw);
+}
+
+/* The website fills the window below the admin bars. */
 .hfe-preview-page .hfe-preview {
+  position: fixed;
+  z-index: 500;
   display: block;
-  width: 100%;
-  /* host.js fits the frame to the window; this is the fallback. */
-  height: calc(100vh - 8rem);
+  inset: var(--hfe-top) var(--hfe-right) 0 var(--hfe-left);
+  /* An iframe keeps its 300x150 size between insets: size it too. */
+  inline-size: calc(100% - var(--hfe-left) - var(--hfe-right));
+  block-size: calc(100% - var(--hfe-top));
   border: 0;
+  background: #fff;
 }
 
+/* Messages and core's preview bar stay above the website. */
+.hfe-preview-page [data-drupal-messages],
+.hfe-preview-page .node-preview-container {
+  position: relative;
+  z-index: 501;
+}
+
+/* A dock floating at the bottom of the website, centred on it. */
 .hfe-panel {
+  position: fixed;
+  z-index: 550;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
-  margin-block-end: 0.75rem;
+  width: max-content;
+  max-width: calc(100vw - var(--hfe-left) - var(--hfe-right) - 2rem);
+  margin-inline: auto;
+  padding: 0.25rem;
+  color: #fff;
+  border-radius: 12px;
+  background: var(--hfe-dock);
+  box-shadow:
+    0 0.75rem 2rem #17191f47,
+    inset 0 0 0 1px #ffffff1f;
   font-size: 0.875rem;
-}
-
-.hfe-panel__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  cursor: pointer;
-  color: var(--hfe-muted);
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  font: inherit;
-  block-size: 2.25rem;
-  padding-inline: 0.5rem;
-}
-
-/* A chevron that points down while the panel is open. */
-.hfe-panel__toggle::before {
-  content: "";
-  transition: rotate 0.15s;
-  border-inline-end: 2px solid currentColor;
-  border-block-end: 2px solid currentColor;
-  inline-size: 0.4rem;
-  block-size: 0.4rem;
-  rotate: 45deg;
-}
-
-.hfe-panel__toggle[aria-expanded="false"]::before {
-  rotate: -45deg;
-}
-
-.hfe-panel__toggle:hover {
-  color: var(--hfe-ink);
-  background: var(--hfe-hover);
-}
-
-.hfe-panel__body {
-  display: flex;
-  flex: 1 1 20rem;
-  flex-wrap: wrap;
-  align-items: center;
-  min-width: 0;
-  gap: 0.5rem 1rem;
-}
-
-.hfe-panel__body ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.hfe-panel__body li {
-  margin: 0;
+  inset-block-end: 1.25rem;
+  inset-inline: var(--hfe-left) var(--hfe-right);
+  gap: 0.25rem;
 }
 
 .hfe-panel__tools {
   display: flex;
-  gap: 0.5rem;
-  margin-inline-start: auto;
+  padding-inline-end: 0.25rem;
+  /* Divides the page's tools from its menu. */
+  border-inline-end: 1px solid #ffffff2e;
+  gap: 0.25rem;
 }
 
-.hfe-tool {
+.hfe-tool,
+.hfe-panel__toggle {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
-  color: var(--hfe-ink);
-  border: 1px solid var(--hfe-line);
-  border-radius: 6px;
-  background: var(--hfe-layer);
+  white-space: nowrap;
+  color: #ffffffd9;
+  border: 0;
+  border-radius: 8px;
+  background: none;
   font: inherit;
   font-weight: 500;
   block-size: 2.25rem;
   padding-inline: 0.875rem;
 }
 
-.hfe-tool:hover {
-  background: var(--hfe-hover);
+.hfe-tool:hover,
+.hfe-panel__toggle:hover,
+.hfe-panel__toggle[aria-expanded="true"] {
+  color: #fff;
+  background: #ffffff1f;
 }
 
-.hfe-tool--primary {
-  color: #fff;
-  border-color: #17191f;
-  background: #17191f;
+/* The main tool: white on the ink, like the section toolbar's edit button. */
+.hfe-tool--primary,
+.hfe-tool--primary:hover {
+  color: var(--hfe-dock);
+  background: #fff;
 }
 
 .hfe-tool--primary:hover {
-  border-color: #2c2f38;
-  background: #2c2f38;
+  background: #e8e9ee;
+}
+
+.hfe-panel__toggle {
+  justify-content: center;
+  padding: 0;
+  inline-size: 2.25rem;
+}
+
+/* The menu opens above the dock. */
+.hfe-panel__body {
+  position: absolute;
+  display: grid;
+  width: max-content;
+  min-width: 16rem;
+  max-width: min(44rem, calc(100vw - 2rem));
+  padding: 1rem;
+  translate: -50% 0;
+  color: var(--hfe-ink);
+  border: 1px solid var(--hfe-line);
+  border-radius: 12px;
+  background: var(--hfe-layer);
+  box-shadow: 0 0.75rem 2rem #17191f33;
+  gap: 0.75rem;
+  inset-block-end: calc(100% + 0.5rem);
+  inset-inline-start: 50%;
+}
+
+.hfe-panel__body strong {
+  display: block;
+  font-size: 0.9375rem;
+}
+
+.hfe-panel__body ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hfe-panel__body li {
+  flex: none;
+  margin: 0;
+}
+
+/* Whole words: the theme's tabs may not shrink into hyphenated stubs. */
+.hfe-panel__body .tabs__link {
+  white-space: nowrap;
+  hyphens: manual;
 }
 
 .hfe-panel__toggle:focus-visible,
@@ -133,7 +170,7 @@
   z-index: 600;
   display: flex;
   flex-direction: column;
-  inset-block: 0;
+  inset-block: var(--hfe-top) 0;
   inset-inline-end: 0;
   inline-size: min(30rem, 100vw);
   border-inline-start: 1px solid var(--hfe-line);

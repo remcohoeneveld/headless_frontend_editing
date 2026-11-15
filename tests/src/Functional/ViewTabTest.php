@@ -69,10 +69,11 @@ final class ViewTabTest extends BrowserTestBase {
     $this->assertSession()->elementExists('css', '.hfe-editor__header > button.hfe-editor__close[aria-label="Close"][title="Close"] > svg[aria-hidden="true"] > path');
     $this->assertSession()->elementExists('css', '.hfe-editor > iframe.hfe-editor__frame');
     $this->assertSession()->elementExists('css', 'button.hfe-panel__toggle[aria-expanded]');
-    // The tools stay visible with the panel body collapsed.
     $target = 'node:' . $this->node->uuid();
     $edit = Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => $target])->toString();
-    $this->assertSession()->elementExists('css', '.hfe-panel > .hfe-panel__body + .hfe-panel__tools > button.hfe-tool.hfe-tool--primary[type="button"][data-hfe-title="Edit page"][data-hfe-open="' . $edit . '"]');
+    // The dock: tools, then the menu toggle and its closed menu.
+    $this->assertSession()->elementExists('css', '.hfe-panel > .hfe-panel__tools + .hfe-panel__toggle + .hfe-panel__body[hidden]');
+    $this->assertSession()->elementExists('css', '.hfe-panel > .hfe-panel__tools > button.hfe-tool.hfe-tool--primary[type="button"][data-hfe-title="Edit page"][data-hfe-open="' . $edit . '"]');
     $this->assertSession()->pageTextContains('Open on website');
     $this->assertSession()->responseContains('"headlessFrontendEditing":{"frontendOrigin":"https:\/\/front.example"');
   }

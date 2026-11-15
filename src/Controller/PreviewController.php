@@ -216,10 +216,9 @@ final class PreviewController extends ControllerBase {
   }
 
   /**
-   * Builds the collapsible panel with node status, tabs and live link.
+   * Builds the floating dock: tools, and a menu with status, tabs and link.
    *
-   * Editable nodes also get tools, outside the collapsible body so they stay
-   * at hand.
+   * Editable nodes get tools in the dock itself, so they stay at hand.
    *
    * @return array<string, mixed>
    *   A render array.
@@ -243,21 +242,18 @@ final class PreviewController extends ControllerBase {
     if ($node->isPublished() && $node->isDefaultRevision() && $route_name !== 'entity.node.preview') {
       $body['live'] = Link::fromTextAndUrl($this->t('Open on website'), Url::fromUri($live_url))->toRenderable();
     }
+    $body['#attributes']['hidden'] = TRUE;
     $panel = [
       '#type' => 'container',
       '#attributes' => ['class' => ['hfe-panel']],
+      // A template: Xss filtering of html_tag would drop the svg.
       'toggle' => [
-        '#type' => 'html_tag',
-        '#tag' => 'button',
-        '#value' => $this->t('Editor panel'),
-        '#attributes' => [
-          'type' => 'button',
-          'class' => ['hfe-panel__toggle'],
-          'aria-expanded' => 'true',
-          'aria-controls' => 'hfe-panel-body',
-        ],
+        '#type' => 'inline_template',
+        '#template' => '<button type="button" class="hfe-panel__toggle" aria-expanded="false" aria-controls="hfe-panel-body" aria-label="{{ label }}" title="{{ label }}"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="5" cy="12" r="1.75"/><circle cx="12" cy="12" r="1.75"/><circle cx="19" cy="12" r="1.75"/></svg></button>',
+        '#context' => ['label' => $this->t('Editor panel')],
+        '#weight' => 10,
       ],
-      'body' => $body,
+      'body' => $body + ['#weight' => 11],
     ];
     if ($editable) {
       $tools = [];

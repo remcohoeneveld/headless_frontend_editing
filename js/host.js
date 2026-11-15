@@ -12,7 +12,6 @@
  *   The once() helper.
  */
 ((Drupal, drupalSettings, once) => {
-  const STORAGE_KEY = 'headlessFrontendEditing.panelCollapsed';
   const TARGET =
     /^([a-z_]+):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?::([a-z0-9_]+))?$/;
   const LANG = /^[a-z]{2,3}(?:-[a-z0-9]+)?$/;
@@ -245,6 +244,7 @@
     }
   });
 
+  // The dock's menu: page status, tabs and link. Closes like a menu.
   Drupal.behaviors.headlessFrontendEditingPanel = {
     attach(context) {
       once('hfe-panel', '.hfe-panel__toggle', context).forEach((toggle) => {
@@ -255,20 +255,26 @@
           toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
           body.hidden = !expanded;
         };
-        try {
-          set(window.localStorage.getItem(STORAGE_KEY) !== '1');
-        } catch (e) {
-          // Storage unavailable: keep the default.
-        }
-        toggle.addEventListener('click', () => {
-          const expanded = toggle.getAttribute('aria-expanded') !== 'true';
-          set(expanded);
-          try {
-            window.localStorage.setItem(STORAGE_KEY, expanded ? '0' : '1');
-          } catch (e) {
-            // Not persisted.
+        toggle.addEventListener('click', () => set(body.hidden));
+        document.addEventListener('click', (event) => {
+          if (!toggle.contains(event.target) && !body.contains(event.target)) {
+            set(false);
           }
         });
+        // A click in the preview or sidebar iframe only blurs this window.
+        window.addEventListener('blur', () => set(false));
+        // Capture: runs before the editor's Escape, which closes the sidebar.
+        document.addEventListener(
+          'keydown',
+          (event) => {
+            if (event.key === 'Escape' && !body.hidden) {
+              event.preventDefault();
+              set(false);
+              toggle.focus();
+            }
+          },
+          true,
+        );
       });
     },
   };
@@ -286,24 +292,6 @@
             );
           }
         });
-      });
-    },
-  };
-
-  Drupal.behaviors.headlessFrontendEditingFit = {
-    attach(context) {
-      once('hfe-fit', '.hfe-preview', context).forEach((frame) => {
-        // The theme's header height is unknown: fill the window below the frame.
-        const fit = () => {
-          const top = frame.getBoundingClientRect().top + window.scrollY;
-          frame.style.height = `${Math.max(320, window.innerHeight - top)}px`;
-        };
-        fit();
-        window.addEventListener('resize', fit);
-        const panel = document.querySelector('.hfe-panel');
-        if (panel && 'ResizeObserver' in window) {
-          new ResizeObserver(fit).observe(panel);
-        }
       });
     },
   };

@@ -98,4 +98,21 @@ final class FieldFocusTest extends KernelTestBase {
     $this->assertSame(['field_intro'], array_keys(EntityFormDisplay::collectRenderDisplay($article, 'default')->getComponents()));
   }
 
+  /**
+   * A whole-entity edit is remembered, and leaves the form display alone.
+   */
+  public function testWholeEntity(): void {
+    $focus = $this->container->get(FieldFocus::class);
+    $this->assertFalse($focus->isWholeEntity('node', 'article'));
+    $focus->set('node', 'article', NULL);
+    $this->assertTrue($focus->isWholeEntity('node', 'article'));
+    $this->assertFalse($focus->isWholeEntity('node', 'page'));
+    $this->assertNull($focus->get('node', 'article'));
+    $components = EntityFormDisplay::collectRenderDisplay(Node::create(['type' => 'article', 'title' => 'Whole']), 'headless_editing')->getComponents();
+    $this->assertArrayHasKey('body', $components);
+    $this->assertArrayHasKey('field_intro', $components);
+    $focus->set('node', 'article', 'field_intro');
+    $this->assertFalse($focus->isWholeEntity('node', 'article'));
+  }
+
 }

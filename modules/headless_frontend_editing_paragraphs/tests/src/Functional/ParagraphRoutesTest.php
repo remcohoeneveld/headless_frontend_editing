@@ -12,12 +12,11 @@ use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\paragraphs\ParagraphInterface;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\Tests\paragraphs\FunctionalJavascript\ParagraphsTestBaseTrait;
-use GuzzleHttp\RequestOptions;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests adding, moving and deleting sections over HTTP.
+ * Tests adding, reordering and deleting sections over HTTP.
  */
 #[Group('headless_frontend_editing')]
 #[RunTestsInSeparateProcesses]
@@ -103,37 +102,111 @@ final class ParagraphRoutesTest extends BrowserTestBase {
   }
 
   /**
-   * POSTs a move, with or without a CSRF token.
+   * Returns the page layout URL of the page.
    */
-  private function move(string $direction, bool $token): int {
-    $parameters = ['uuid' => $this->first->uuid(), 'direction' => $direction];
-    $url = Url::fromRoute('headless_frontend_editing_paragraphs.move', $parameters)->setAbsolute()->toString();
-    $headers = [];
-    if ($token) {
-      $this->drupalGet('session/token');
-      $headers['X-CSRF-Token'] = $this->getSession()->getPage()->getContent();
-    }
-    $response = $this->getHttpClient()->request('POST', $url, [
-      RequestOptions::HEADERS => $headers,
-      RequestOptions::COOKIES => $this->getSessionCookies(),
-      RequestOptions::HTTP_ERRORS => FALSE,
+  private function orderUrl(): Url {
+    return Url::fromRoute('headless_frontend_editing_paragraphs.order', [
+      'langcode' => 'en',
+      'target' => 'node:' . $this->node->uuid(),
     ]);
-    return $response->getStatusCode();
   }
 
   /**
-   * Tests that moving needs the CSRF header and swaps the sections.
+   * Returns the name of a section's weight field in the page layout.
    */
-  public function testMove(): void {
+  private function weight(ParagraphInterface $paragraph): string {
+    return 'fields[field_sections][sections][' . $paragraph->id() . '][weight]';
+  }
+
+  /**
+   * Tests that the page layout lists the sections in order and reorders them.
+   */
+  public function testOrder(): void {
     $this->login();
     $revision = (int) $this->node->getRevisionId();
-    $this->assertSame(403, $this->move('down', FALSE));
-    $this->assertSame(['First', 'Second'], $this->texts());
-    $this->assertSame(200, $this->move('down', TRUE));
+    $this->drupalGet($this->orderUrl());
+    $this->assertSession()->elementTextEquals('css', 'title', 'Page layout | Drupal');
+    $session = $this->assertSession();
+    $rows = $this->getSession()->getPage()->findAll('css', 'table.hfe-order tr.hfe-order__row');
+    $this->assertCount(2, $rows);
+    $this->assertSame('text', $rows[0]->find('css', 'strong.hfe-order__type')->getText());
+    $this->assertSame('First', $rows[0]->find('css', '.hfe-order__summary')->getText());
+    $this->assertSame('Second', $rows[1]->find('css', '.hfe-order__summary')->getText());
+    $target = 'paragraph:' . $this->first->uuid();
+    $edit = Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => $target])->toString();
+    $session->elementExists('css', '.hfe-order__actions a[href="' . $edit . '"]');
+    $delete = Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $this->first->uuid()])->toString();
+    $session->elementExists('css', '.hfe-order__actions a[href="' . $delete . '"]');
+    $add = Url::fromRoute('headless_frontend_editing_paragraphs.add', [
+      'uuid' => $this->second->uuid(),
+      'position' => 'after',
+    ])->toString();
+    $session->elementExists('css', 'a.hfe-order__add[href="' . $add . '"]');
+    // One section field: no caption.
+    $session->elementNotExists('css', 'table.hfe-order caption');
+
+    // Saving the same order adds no revision.
+    $this->submitForm([], 'Save order');
+    $session->addressEquals(Url::fromRoute('headless_frontend_editing.saved'));
+    $this->assertSame($revision, (int) $this->reload()->getRevisionId());
+
+    $this->drupalGet($this->orderUrl());
+    $this->submitForm([$this->weight($this->first) => 1, $this->weight($this->second) => 0], 'Save order');
+    $session->addressEquals(Url::fromRoute('headless_frontend_editing.saved'));
     $this->assertSame(['Second', 'First'], $this->texts());
     $node = $this->reload();
     $this->assertGreaterThan($revision, (int) $node->getRevisionId());
-    $this->assertSame('Moved text from the frontend preview.', $node->getRevisionLogMessage());
+    $this->assertSame('Reordered sections from the frontend preview.', $node->getRevisionLogMessage());
+  }
+
+  /**
+   * Tests that the page layout refuses to save over sections changed since.
+   */
+  public function testOrderStale(): void {
+    $this->login();
+    $this->drupalGet($this->orderUrl());
+    $third = Paragraph::create(['type' => 'text', 'field_text' => 'Third']);
+    $node = $this->reload();
+    $node->get('field_sections')->appendItem($third);
+    $node->save();
+    $this->submitForm([$this->weight($this->first) => 1, $this->weight($this->second) => 0], 'Save order');
+    $this->assertSession()->pageTextContains('The page changed since you opened this view. Reload and try again.');
+    $this->assertSame(['First', 'Second', 'Third'], $this->texts());
+  }
+
+  /**
+   * Tests the page layout tool in the editor panel.
+   */
+  public function testOrderTool(): void {
+    $this->config('headless_frontend_editing.settings')->set('frontend_url', 'https://front.example')->save();
+    $this->login();
+    $this->drupalGet($this->node->toUrl());
+    $this->assertSession()->elementExists('css', '.hfe-panel__tools button.hfe-tool:not(.hfe-tool--primary)[data-hfe-title="Page layout"][data-hfe-open="' . $this->orderUrl()->toString() . '"]');
+
+    \Drupal::state()->set(LockedFieldHooks::STATE, 'field_sections');
+    $this->drupalGet($this->node->toUrl());
+    $this->assertSession()->elementExists('css', '.hfe-panel__tools button.hfe-tool--primary');
+    $this->assertSession()->elementNotExists('css', '[data-hfe-title="Page layout"]');
+  }
+
+  /**
+   * Tests that editing the whole page leaves out its sections.
+   */
+  public function testWholePageWithoutSections(): void {
+    $this->login();
+    $target = 'node:' . $this->node->uuid();
+    $this->drupalGet(Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => $target]));
+    $this->assertSession()->fieldExists('title[0][value]');
+    $this->assertSession()->elementNotExists('css', '[name^="field_sections"]');
+    $this->submitForm(['title[0][value]' => 'Renamed'], 'Save');
+    $this->assertSame('Renamed', $this->reload()->getTitle());
+    $this->assertSame(['First', 'Second'], $this->texts());
+
+    // A section is still edited with its own fields.
+    $target = 'paragraph:' . $this->first->uuid();
+    $this->drupalGet(Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => $target]));
+    $this->assertSession()->fieldExists('field_text[0][value]');
+    $this->assertSession()->elementTextEquals('css', 'title', 'Edit text | Drupal');
   }
 
   /**
@@ -212,11 +285,11 @@ final class ParagraphRoutesTest extends BrowserTestBase {
         'bundle' => 'text',
       ]),
       Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $uuid]),
+      $this->orderUrl(),
     ] as $url) {
       $this->drupalGet($url);
       $this->assertSession()->statusCodeEquals(403);
     }
-    $this->assertSame(403, $this->move('down', TRUE));
     $this->assertSame(['First', 'Second'], $this->texts());
   }
 
@@ -232,11 +305,11 @@ final class ParagraphRoutesTest extends BrowserTestBase {
       Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => "paragraph:$uuid:field_text"]),
       Url::fromRoute('headless_frontend_editing_paragraphs.add', ['uuid' => $uuid, 'position' => 'before']),
       Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $uuid]),
+      $this->orderUrl(),
     ] as $url) {
       $this->drupalGet($url);
       $this->assertSession()->statusCodeEquals(403);
     }
-    $this->assertSame(403, $this->move('down', TRUE));
     $this->assertSame(['First', 'Second'], $this->texts());
   }
 
@@ -265,11 +338,11 @@ final class ParagraphRoutesTest extends BrowserTestBase {
         'bundle' => 'text',
       ]),
       Url::fromRoute('headless_frontend_editing_paragraphs.delete', ['uuid' => $uuid]),
+      $this->orderUrl(),
     ] as $url) {
       $this->drupalGet($url);
       $this->assertSession()->statusCodeEquals(403);
     }
-    $this->assertSame(403, $this->move('down', TRUE));
   }
 
 }

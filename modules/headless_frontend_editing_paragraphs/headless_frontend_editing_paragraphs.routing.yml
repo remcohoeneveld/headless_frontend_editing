@@ -29,20 +29,6 @@ headless_frontend_editing_paragraphs.add_form:
     _admin_route: true
     no_cache: true
 
-headless_frontend_editing_paragraphs.move:
-  path: '/headless-frontend-editing/paragraph/{uuid}/move/{direction}'
-  defaults:
-    _controller: '\Drupal\headless_frontend_editing_paragraphs\Controller\ParagraphController::move'
-  methods: [POST]
-  requirements:
-    _permission: 'use headless frontend editing'
-    _custom_access: '\Drupal\headless_frontend_editing_paragraphs\Controller\ParagraphController::access'
-    _csrf_request_header_token: 'TRUE'
-    uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
-    direction: 'up|down'
-  options:
-    no_cache: true
-
 headless_frontend_editing_paragraphs.delete:
   path: '/headless-frontend-editing/paragraph/{uuid}/delete'
   defaults:
@@ -52,6 +38,19 @@ headless_frontend_editing_paragraphs.delete:
     _permission: 'use headless frontend editing'
     _custom_access: '\Drupal\headless_frontend_editing_paragraphs\Controller\ParagraphController::deleteAccess'
     uuid: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+  options:
+    _headless_frontend_editing_sidebar: true
+    _admin_route: true
+    no_cache: true
+
+headless_frontend_editing_paragraphs.order:
+  path: '/headless-frontend-editing/sections/{langcode}/{target}'
+  defaults:
+    _form: '\Drupal\headless_frontend_editing_paragraphs\Form\SectionOrderForm'
+    _title: 'Page layout'
+  requirements:
+    _permission: 'use headless frontend editing'
+    _custom_access: '\Drupal\headless_frontend_editing_paragraphs\Controller\ParagraphController::orderAccess'
   options:
     _headless_frontend_editing_sidebar: true
     _admin_route: true

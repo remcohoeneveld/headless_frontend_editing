@@ -31,7 +31,7 @@ headless_frontend_editing.edit:
   path: '/headless-frontend-editing/edit/{langcode}/{target}'
   defaults:
     _controller: '\Drupal\headless_frontend_editing\Controller\EditController::edit'
-    _title: 'Edit'
+    _title_callback: '\Drupal\headless_frontend_editing\Controller\EditController::title'
   requirements:
     _permission: 'use headless frontend editing'
     _custom_access: '\Drupal\headless_frontend_editing\Controller\EditController::access'

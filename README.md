@@ -13,10 +13,13 @@ overlay client, the forms and the access checks.
 - Entity, field and (with the submodule) Paragraphs section targets, in any language.
 - Read-only preview tokens, so unpublished content and revisions can be previewed.
 - Live preview while typing, for rich text and other fields.
+- Panel tools above the preview: "Edit page" opens the whole node form (with
+  the submodule, without its sections, which have their own forms), and
+  modules add their own with `hook_headless_frontend_editing_tools_alter()`.
 - On-demand revalidation of the frontend after content changes.
 
-Submodule `headless_frontend_editing_paragraphs` adds, moves and deletes
-Paragraphs sections.
+Submodule `headless_frontend_editing_paragraphs` adds and deletes Paragraphs
+sections, and adds a "Page layout" view to reorder them by dragging.
 
 ## Requirements
 
@@ -86,7 +89,7 @@ Next.js is in `examples/nextjs`.
 
     data-hfe="entity_type:uuid"             whole entity, for example node:<uuid>
     data-hfe="entity_type:uuid:field_name"  one field, for example node:<uuid>:field_intro
-    data-hfe="paragraph:uuid"               a section (submodule: also move, delete, add)
+    data-hfe="paragraph:uuid"               a section (submodule: also delete, add)
 
 The language comes from `data-hfe-lang` on the element or its closest ancestor,
 else from `<html lang>`. Any entity type that has a form works. Targets the

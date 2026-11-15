@@ -157,10 +157,23 @@
     // eslint-disable-next-line no-alert
     !dirty || window.confirm(Drupal.t('Discard unsaved changes?'));
 
-  hfe.open = (url) => {
+  const editorTitle = () => document.querySelector('.hfe-editor__title');
+
+  /**
+   * Opens a page in the sidebar.
+   *
+   * @param {string} url
+   *   The URL of a sidebar page.
+   * @param {string} title
+   *   The title to show until the page reports its own.
+   */
+  hfe.open = (url, title = '') => {
     const frame = editorFrame();
     if (!frame) {
       return;
+    }
+    if (editorTitle()) {
+      editorTitle().textContent = title;
     }
     frame.src = url;
     editor().hidden = false;
@@ -260,6 +273,23 @@
     },
   };
 
+  // Panel tools, such as editing the whole page, open in the sidebar.
+  Drupal.behaviors.headlessFrontendEditingTools = {
+    attach(context) {
+      once('hfe-tool', '[data-hfe-open]', context).forEach((button) => {
+        button.addEventListener('click', () => {
+          if (hfe.confirmDiscard()) {
+            hfe.open(
+              button.getAttribute('data-hfe-open'),
+              button.getAttribute('data-hfe-title') ||
+                button.textContent.trim(),
+            );
+          }
+        });
+      });
+    },
+  };
+
   Drupal.behaviors.headlessFrontendEditingFit = {
     attach(context) {
       once('hfe-fit', '.hfe-preview', context).forEach((frame) => {
@@ -326,6 +356,11 @@
           );
           if (!doc) {
             return;
+          }
+          // The sidebar page's own heading names what is open.
+          const heading = doc.querySelector('.hfe-sidebar-page__title');
+          if (heading && editorTitle()) {
+            editorTitle().textContent = heading.textContent.trim();
           }
           doc.addEventListener('keydown', onEscape);
           doc.addEventListener('input', changed);

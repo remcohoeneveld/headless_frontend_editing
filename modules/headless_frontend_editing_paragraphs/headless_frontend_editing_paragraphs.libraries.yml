@@ -3,3 +3,9 @@ add:
   css:
     theme:
       css/add.css: {}
+
+order:
+  version: VERSION
+  css:
+    theme:
+      css/order.css: {}

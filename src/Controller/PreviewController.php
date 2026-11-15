@@ -12,6 +12,7 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormBuilderInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
 use Drupal\headless_frontend_editing\PreviewToken;
 use Drupal\node\Controller\NodeController;
@@ -155,7 +156,7 @@ final class PreviewController extends ControllerBase {
 
     $build = [
       'hfe' => [
-        'panel' => $this->panel($node, $frontend_url . $path, $route_name),
+        'panel' => $this->panel($node, $frontend_url . $path, $route_name, $editable),
         'preview' => $this->frame('hfe-preview', $src, $this->t('Preview of @label', ['@label' => $node->label()])),
       ],
     ];
@@ -165,14 +166,14 @@ final class PreviewController extends ControllerBase {
         '#attributes' => [
           'class' => ['hfe-editor'],
           'role' => 'complementary',
-          'aria-label' => $this->t('Editor'),
+          'aria-labelledby' => 'hfe-editor-title',
           'hidden' => TRUE,
         ],
-        'close' => [
-          '#type' => 'html_tag',
-          '#tag' => 'button',
-          '#value' => $this->t('Close'),
-          '#attributes' => ['type' => 'button', 'class' => ['hfe-editor__close']],
+        // A template: Xss filtering of #markup or html_tag would drop the svg.
+        'header' => [
+          '#type' => 'inline_template',
+          '#template' => '<div class="hfe-editor__header"><h2 class="hfe-editor__title" id="hfe-editor-title"></h2><button type="button" class="hfe-editor__close" aria-label="{{ close }}" title="{{ close }}"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>',
+          '#context' => ['close' => $this->t('Close')],
         ],
         'frame' => $this->frame('hfe-editor__frame', NULL, $this->t('Editor')),
       ];
@@ -217,10 +218,13 @@ final class PreviewController extends ControllerBase {
   /**
    * Builds the collapsible panel with node status, tabs and live link.
    *
+   * Editable nodes also get tools, outside the collapsible body so they stay
+   * at hand.
+   *
    * @return array<string, mixed>
    *   A render array.
    */
-  private function panel(NodeInterface $node, string $live_url, ?string $route_name): array {
+  private function panel(NodeInterface $node, string $live_url, ?string $route_name, bool $editable): array {
     $body = [
       '#type' => 'container',
       '#attributes' => ['id' => 'hfe-panel-body', 'class' => ['hfe-panel__body']],
@@ -239,7 +243,7 @@ final class PreviewController extends ControllerBase {
     if ($node->isPublished() && $node->isDefaultRevision() && $route_name !== 'entity.node.preview') {
       $body['live'] = Link::fromTextAndUrl($this->t('Open on website'), Url::fromUri($live_url))->toRenderable();
     }
-    return [
+    $panel = [
       '#type' => 'container',
       '#attributes' => ['class' => ['hfe-panel']],
       'toggle' => [
@@ -254,6 +258,50 @@ final class PreviewController extends ControllerBase {
         ],
       ],
       'body' => $body,
+    ];
+    if ($editable) {
+      $tools = [];
+      $edit = Url::fromRoute('headless_frontend_editing.edit', [
+        'langcode' => $node->language()->getId(),
+        'target' => 'node:' . $node->uuid(),
+      ]);
+      // Editable does not rule out a pending draft or a hook refusing it.
+      if ($edit->access($this->currentUser())) {
+        $tools['edit'] = self::tool($this->t('Edit page'), $edit, TRUE);
+      }
+      $this->moduleHandler()->alter('headless_frontend_editing_tools', $tools, $node);
+      $panel['tools'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['hfe-panel__tools']],
+      ] + $tools;
+    }
+    return $panel;
+  }
+
+  /**
+   * Builds a panel tool: a button that opens a page in the sidebar.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|string $label
+   *   The button text, also the sidebar title.
+   * @param \Drupal\Core\Url $url
+   *   The page to open.
+   * @param bool $primary
+   *   Whether this is the main tool.
+   *
+   * @return array<string, mixed>
+   *   A render array.
+   */
+  public static function tool(TranslatableMarkup|string $label, Url $url, bool $primary = FALSE): array {
+    return [
+      '#type' => 'html_tag',
+      '#tag' => 'button',
+      '#value' => $label,
+      '#attributes' => [
+        'type' => 'button',
+        'class' => $primary ? ['hfe-tool', 'hfe-tool--primary'] : ['hfe-tool'],
+        'data-hfe-open' => $url->toString(),
+        'data-hfe-title' => $label,
+      ],
     ];
   }
 

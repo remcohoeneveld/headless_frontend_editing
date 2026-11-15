@@ -113,25 +113,13 @@ final class ParagraphTreeTest extends KernelTestBase {
   }
 
   /**
-   * Tests that moving the first item up is not possible.
-   */
-  public function testMoveBounds(): void {
-    [$node, $a, $b] = $this->page();
-    $this->setUpCurrentUser();
-    $this->assertFalse($this->tree->move(Paragraph::load($a->id()), 'up'));
-    $this->assertSame([(int) $a->id(), (int) $b->id()], $this->order($node));
-    $this->assertTrue($this->tree->move(Paragraph::load($a->id()), 'down'));
-    $this->assertSame([(int) $b->id(), (int) $a->id()], $this->order($node));
-  }
-
-  /**
    * Tests that saving the root adds a logged revision.
    */
   public function testSaveRootRevision(): void {
     [$node] = $this->page();
     $user = $this->setUpCurrentUser();
     $revision = (int) $node->getRevisionId();
-    $this->tree->saveRoot($node, 'Moved Text from the frontend preview.');
+    $this->tree->saveRoot($node, 'Reordered sections from the frontend preview.');
     $storage = $this->container->get('entity_type.manager')->getStorage('node');
     $storage->resetCache();
     $node = $storage->load($node->id());
@@ -139,7 +127,7 @@ final class ParagraphTreeTest extends KernelTestBase {
     $count = $storage->getQuery()->allRevisions()->accessCheck(FALSE)->condition('nid', $node->id())->count()->execute();
     $this->assertSame(2, (int) $count);
     $this->assertGreaterThan($revision, (int) $node->getRevisionId());
-    $this->assertSame('Moved Text from the frontend preview.', $node->getRevisionLogMessage());
+    $this->assertSame('Reordered sections from the frontend preview.', $node->getRevisionLogMessage());
     $this->assertSame($user->id(), $node->getRevisionUserId());
   }
 

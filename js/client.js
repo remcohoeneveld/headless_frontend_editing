@@ -16,37 +16,90 @@
   const drupalOrigin = new URL(script.src).origin;
   const TARGET =
     /^([a-z_]+):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?::([a-z0-9_]+))?$/;
+  // Ink tab on a violet ring: the ring keeps a white inner edge, so it shows on
+  // dark and light sections alike.
   const STYLE = `
-    [hidden] { display: none; }
+    [hidden] { display: none !important; }
     .outline {
       position: fixed;
-      outline: 2px solid #2563eb;
-      outline-offset: 2px;
+      border-radius: 2px;
+      box-shadow: 0 0 0 1px #fff, 0 0 0 3px #6e56ff;
     }
     .toolbar {
       position: fixed;
       display: flex;
-      gap: 4px;
-      padding: 4px;
-      border-radius: 4px;
-      background: #1e3a8a;
+      align-items: center;
+      gap: 2px;
+      padding: 3px;
+      border-radius: 8px 8px 0 0;
+      background: #17191f;
       color: #fff;
-      font: 13px/1.2 system-ui, sans-serif;
+      font: 500 13px/1 system-ui, -apple-system, 'Segoe UI', sans-serif;
+      letter-spacing: 0;
       pointer-events: auto;
+      box-shadow: 0 0 0 1px #6e56ff;
     }
-    .label { padding: 4px 6px; }
+    .toolbar.inside { border-radius: 0 0 8px; }
+    .label {
+      max-width: 16em;
+      padding: 0 8px 0 7px;
+      overflow: hidden;
+      color: #b4b8c5;
+      font-weight: 400;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
     button {
-      padding: 4px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 28px;
+      padding: 0 10px;
       border: 0;
-      border-radius: 3px;
-      background: #fff;
-      color: #1e3a8a;
+      border-radius: 5px;
+      background: transparent;
+      color: inherit;
       font: inherit;
       cursor: pointer;
     }
-    button:disabled { opacity: 0.5; cursor: default; }
-    button:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+    button.primary { background: #fff; color: #17191f; }
+    button.icon { width: 28px; padding: 0; justify-content: center; }
+    button:hover:not(:disabled) { background: #2c2f38; }
+    button.primary:hover:not(:disabled) { background: #e7e3ff; }
+    button.danger:hover:not(:disabled) { background: #c92a2a; }
+    button:disabled { opacity: 0.35; cursor: default; }
+    button:focus-visible { outline: 2px solid #9d8cff; outline-offset: 1px; }
+    .sep { width: 1px; height: 18px; margin: 0 3px; background: #3a3d47; }
+    svg { flex: none; }
   `;
+
+  // Icons for known actions; other actions show their label.
+  const ICONS = {
+    edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4',
+    'add-before': 'M5 20h14M12 4v10M7 9h10',
+    'add-after': 'M5 4h14M12 10v10M7 15h10',
+    delete: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
+  };
+
+  const icon = (path) => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '16');
+    svg.setAttribute('height', '16');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    const shape = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'path',
+    );
+    shape.setAttribute('d', path);
+    svg.append(shape);
+    return svg;
+  };
 
   /** Described targets, keyed by "id|lang". */
   const descriptions = new Map();
@@ -145,9 +198,12 @@
         width: `${rect.width}px`,
         height: `${rect.height}px`,
       });
+      // A tab on the top edge, or inside the target when there is no room.
+      const inside = rect.top - 3 < toolbar.offsetHeight;
+      toolbar.classList.toggle('inside', inside);
       Object.assign(toolbar.style, {
-        top: `${Math.max(0, rect.top - toolbar.offsetHeight)}px`,
-        left: `${Math.max(0, rect.left)}px`,
+        top: `${inside ? Math.max(0, rect.top) : rect.top - 3 - toolbar.offsetHeight}px`,
+        left: `${Math.max(0, rect.left - 3)}px`,
       });
     };
 
@@ -172,8 +228,20 @@
         .map((action) => {
           const button = document.createElement('button');
           button.type = 'button';
-          button.textContent = action.label;
           button.disabled = !!action.disabled;
+          const path = Object.hasOwn(ICONS, action.id) && ICONS[action.id];
+          if (action.id === 'edit') {
+            // The main action keeps its words next to the icon.
+            button.className = 'primary';
+            button.append(icon(path), action.label);
+          } else if (path) {
+            button.className = action.id === 'delete' ? 'icon danger' : 'icon';
+            button.setAttribute('aria-label', action.label);
+            button.title = action.label;
+            button.append(icon(path));
+          } else {
+            button.textContent = action.label;
+          }
           button.addEventListener('click', () => {
             post({
               type: 'hfe:action',
@@ -184,7 +252,15 @@
           });
           return button;
         });
-      toolbar.replaceChildren(label, ...buttons);
+      // A divider between the main action and the rest.
+      const sep = document.createElement('span');
+      sep.className = 'sep';
+      toolbar.replaceChildren(
+        label,
+        ...buttons.slice(0, 1),
+        ...(buttons.length > 1 ? [sep] : []),
+        ...buttons.slice(1),
+      );
       place();
     };
 

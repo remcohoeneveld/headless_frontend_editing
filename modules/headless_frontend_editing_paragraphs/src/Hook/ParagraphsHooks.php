@@ -7,17 +7,24 @@ namespace Drupal\headless_frontend_editing_paragraphs\Hook;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\TypedData\TranslatableInterface;
+use Drupal\Core\Url;
+use Drupal\headless_frontend_editing\Controller\PreviewController;
+use Drupal\headless_frontend_editing\FieldFocus;
 use Drupal\headless_frontend_editing\Hook\EntityFormHooks;
 use Drupal\headless_frontend_editing\Target;
 use Drupal\headless_frontend_editing_paragraphs\Form\ParagraphForm;
 use Drupal\headless_frontend_editing_paragraphs\ParagraphTree;
+use Drupal\node\NodeInterface;
 use Drupal\paragraphs\ParagraphInterface;
 
 /**
@@ -31,6 +38,9 @@ final class ParagraphsHooks {
     private readonly ParagraphTree $tree,
     private readonly ModuleExtensionList $moduleList,
     private readonly AccountInterface $currentUser,
+    private readonly FieldFocus $fieldFocus,
+    private readonly ConfigFactoryInterface $configFactory,
+    private readonly EntityFieldManagerInterface $entityFieldManager,
   ) {}
 
   /**
@@ -66,6 +76,55 @@ final class ParagraphsHooks {
   }
 
   /**
+   * Implements hook_entity_form_display_alter().
+   *
+   * Editing a whole page leaves out its sections: they are edited one by one,
+   * and reordered in the page layout. Paragraphs keep their nested sections,
+   * which have no page layout of their own.
+   *
+   * @param \Drupal\Core\Entity\Display\EntityFormDisplayInterface $form_display
+   *   The form display.
+   * @param array<string, string> $context
+   *   The entity type, bundle and form mode.
+   */
+  #[Hook('entity_form_display_alter')]
+  public function formDisplayAlter(EntityFormDisplayInterface $form_display, array $context): void {
+    if ($context['entity_type'] === 'paragraph'
+      || $context['form_mode'] !== $this->configFactory->get('headless_frontend_editing.settings')->get('form_mode')
+      || !$this->fieldFocus->isWholeEntity($context['entity_type'], $context['bundle'])) {
+      return;
+    }
+    $definitions = $this->entityFieldManager->getFieldDefinitions($context['entity_type'], $context['bundle']);
+    foreach (array_keys($form_display->getComponents()) as $name) {
+      $definition = $definitions[$name] ?? NULL;
+      if ($definition?->getType() === 'entity_reference_revisions' && $definition->getSetting('target_type') === 'paragraph') {
+        $form_display->removeComponent($name);
+      }
+    }
+  }
+
+  /**
+   * Implements hook_headless_frontend_editing_tools_alter().
+   *
+   * Adds the page layout, for pages whose sections the user may reorder.
+   *
+   * @param array<string, mixed> $tools
+   *   The tools.
+   * @param \Drupal\node\NodeInterface $node
+   *   The node shown.
+   */
+  #[Hook('headless_frontend_editing_tools_alter')]
+  public function toolsAlter(array &$tools, NodeInterface $node): void {
+    $url = Url::fromRoute('headless_frontend_editing_paragraphs.order', [
+      'langcode' => $node->language()->getId(),
+      'target' => 'node:' . $node->uuid(),
+    ]);
+    if ($url->access($this->currentUser)) {
+      $tools['layout'] = PreviewController::tool($this->t('Page layout'), $url);
+    }
+  }
+
+  /**
    * Implements hook_headless_frontend_editing_preview_root().
    */
   #[Hook('headless_frontend_editing_preview_root')]
@@ -92,7 +151,8 @@ final class ParagraphsHooks {
   /**
    * Implements hook_headless_frontend_editing_target_alter().
    *
-   * Adds moving, deleting and adding sections to paragraph targets.
+   * Adds deleting and adding sections to paragraph targets. Reordering is
+   * done in the page layout (SectionOrderForm).
    *
    * @param array<string, mixed> $description
    *   The target description.
@@ -114,25 +174,22 @@ final class ParagraphsHooks {
     if (!$this->canRearrange($paragraph)) {
       return;
     }
-    $items = $this->tree->items($paragraph);
-    $count = count($items);
-    $delta = $this->tree->delta($items, $paragraph);
+    $count = count($this->tree->items($paragraph));
     $full = !$this->tree->allowedTypes($paragraph);
     foreach ([
-      'up' => [$this->t('Move up'), $delta === 0],
-      'down' => [$this->t('Move down'), $delta === $count - 1],
-      'delete' => [$this->t('Delete'), $count < 2 || !$paragraph->access('delete', $this->currentUser)],
       'add-before' => [$this->t('Add section above'), $full],
       'add-after' => [$this->t('Add section below'), $full],
+      // Last: the one action that removes something.
+      'delete' => [$this->t('Delete'), $count < 2 || !$paragraph->access('delete', $this->currentUser)],
     ] as $id => [$label, $disabled]) {
       $description['actions'][] = ['id' => $id, 'label' => (string) $label, 'disabled' => $disabled];
     }
   }
 
   /**
-   * Whether sections may be added, moved or deleted next to this one.
+   * Whether sections may be added or deleted next to this one.
    *
-   * Adding, moving or deleting changes the reference field of every parent up
+   * Adding or deleting changes the reference field of every parent up
    * to the root. When one of them is not translatable, that change reaches all
    * languages, so it is only offered in the root's default translation.
    */

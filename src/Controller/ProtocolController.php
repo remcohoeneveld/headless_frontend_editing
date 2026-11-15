@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\headless_frontend_editing\Controller;
 
-use Drupal\Component\Utility\Html;
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\headless_frontend_editing\PreviewToken;
 use Drupal\headless_frontend_editing\TargetResolver;
@@ -28,7 +26,6 @@ final class ProtocolController extends ControllerBase {
   public function __construct(
     private readonly TargetResolver $resolver,
     private readonly PreviewToken $previewToken,
-    private readonly EntityTypeBundleInfoInterface $bundleInfo,
     private readonly ModuleExtensionList $moduleList,
   ) {}
 
@@ -39,7 +36,6 @@ final class ProtocolController extends ControllerBase {
     return new static(
       $container->get(TargetResolver::class),
       $container->get(PreviewToken::class),
-      $container->get('entity_type.bundle.info'),
       $container->get('extension.list.module'),
     );
   }
@@ -59,27 +55,7 @@ final class ProtocolController extends ControllerBase {
       if (!$target || !$this->resolver->access($target, $this->currentUser())->isAllowed()) {
         continue;
       }
-      $entity = $target->entity;
-      if ($target->fieldName === NULL) {
-        $bundle = $this->bundleInfo->getBundleInfo($entity->getEntityTypeId())[$entity->bundle()]['label'] ?? $entity->bundle();
-        $name = (string) $entity->label();
-        $label = $this->t('@label (@bundle)', ['@label' => $name, '@bundle' => $bundle]);
-        $action = $this->t('Edit @label', ['@label' => $name]);
-      }
-      else {
-        $label = $entity->get($target->fieldName)->getFieldDefinition()->getLabel();
-        $action = $this->t('Edit @label', ['@label' => $label]);
-      }
-      $description = [
-        'id' => $target->id(),
-        'lang' => $item['lang'],
-        // Plain text: the client sets it with textContent, so undo the escaping
-        // of the @ placeholders.
-        'label' => Html::decodeEntities((string) $label),
-        'actions' => [['id' => 'edit', 'label' => Html::decodeEntities((string) $action), 'disabled' => FALSE]],
-      ];
-      $this->moduleHandler()->alter('headless_frontend_editing_target', $description, $target);
-      $result[] = $description;
+      $result[] = $this->resolver->describe($target, $item['lang']);
     }
     return new JsonResponse(['targets' => $result]);
   }

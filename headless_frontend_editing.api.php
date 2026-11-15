@@ -10,7 +10,10 @@ use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Url;
+use Drupal\headless_frontend_editing\Controller\PreviewController;
 use Drupal\headless_frontend_editing\Target;
+use Drupal\node\NodeInterface;
 
 /**
  * Checks access to edit a target, on top of entity and field access.
@@ -73,4 +76,23 @@ function hook_headless_frontend_editing_preview_root(ContentEntityInterface $ent
     return $parent;
   }
   return NULL;
+}
+
+/**
+ * Alters the tools in the editor panel above an editable node's preview.
+ *
+ * Each tool is a render array, typically a button whose data-hfe-open URL the
+ * host opens in the sidebar, titled by data-hfe-title. Build one with
+ * PreviewController::tool(). Only offer pages the current user can open.
+ *
+ * @param array<string, mixed> $tools
+ *   The tools, keyed by name; 'edit' opens the whole node's form.
+ * @param \Drupal\node\NodeInterface $node
+ *   The node shown, in the language shown.
+ */
+function hook_headless_frontend_editing_tools_alter(array &$tools, NodeInterface $node): void {
+  $url = Url::fromRoute('entity.node.version_history', ['node' => $node->id()]);
+  if ($url->access()) {
+    $tools['history'] = PreviewController::tool(t('Revisions'), $url);
+  }
 }

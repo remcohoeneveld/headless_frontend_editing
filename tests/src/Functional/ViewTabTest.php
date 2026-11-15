@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\headless_frontend_editing\Functional;
 
+use Drupal\Core\Url;
 use Drupal\node\NodeInterface;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\Tests\node\Traits\NodeCreationTrait;
@@ -63,8 +64,15 @@ final class ViewTabTest extends BrowserTestBase {
     $this->assertStringContainsString('path=%2Fnode%2F1', $src);
     $this->assertStringContainsString('token=', $src);
     $this->assertStringContainsString('edit=1', $src);
-    $this->assertSession()->elementExists('css', '.hfe-editor[hidden]');
+    $this->assertSession()->elementExists('css', '.hfe-editor[hidden][aria-labelledby="hfe-editor-title"]');
+    $this->assertSession()->elementExists('css', '.hfe-editor > .hfe-editor__header > h2.hfe-editor__title#hfe-editor-title');
+    $this->assertSession()->elementExists('css', '.hfe-editor__header > button.hfe-editor__close[aria-label="Close"][title="Close"] > svg[aria-hidden="true"] > path');
+    $this->assertSession()->elementExists('css', '.hfe-editor > iframe.hfe-editor__frame');
     $this->assertSession()->elementExists('css', 'button.hfe-panel__toggle[aria-expanded]');
+    // The tools stay visible with the panel body collapsed.
+    $target = 'node:' . $this->node->uuid();
+    $edit = Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => $target])->toString();
+    $this->assertSession()->elementExists('css', '.hfe-panel > .hfe-panel__body + .hfe-panel__tools > button.hfe-tool.hfe-tool--primary[type="button"][data-hfe-title="Edit page"][data-hfe-open="' . $edit . '"]');
     $this->assertSession()->pageTextContains('Open on website');
     $this->assertSession()->responseContains('"headlessFrontendEditing":{"frontendOrigin":"https:\/\/front.example"');
   }
@@ -77,6 +85,7 @@ final class ViewTabTest extends BrowserTestBase {
     $this->drupalGet('node/1');
     $this->assertSame('https://front.example/node/1', $this->iframeSrc());
     $this->assertSession()->elementNotExists('css', '.hfe-editor');
+    $this->assertSession()->elementNotExists('css', '.hfe-panel__tools');
   }
 
   /**
@@ -94,6 +103,7 @@ final class ViewTabTest extends BrowserTestBase {
     $src = $this->iframeSrc();
     $this->assertStringContainsString("revision=$vid", $src);
     $this->assertStringNotContainsString('edit=1', $src);
+    $this->assertSession()->elementNotExists('css', '.hfe-panel__tools');
   }
 
   /**

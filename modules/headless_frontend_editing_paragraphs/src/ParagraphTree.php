@@ -60,7 +60,7 @@ final class ParagraphTree {
   }
 
   /**
-   * Checks access to add, move or delete sections next to a paragraph.
+   * Checks access to add or delete sections next to a paragraph.
    *
    * That changes the reference field of every parent up to the root, so it
    * needs update access to the root and edit access to each of those fields.
@@ -169,25 +169,27 @@ final class ParagraphTree {
   }
 
   /**
-   * Swaps a paragraph with its neighbor and saves the root.
+   * Returns the section fields of an entity whose order an account may change.
    *
-   * @return bool
-   *   FALSE when there is no neighbor in that direction.
+   * Those are the paragraph reference fields with edit access. An
+   * untranslatable one is shared by all translations, so it is only offered
+   * in the default translation.
+   *
+   * @return \Drupal\Core\Field\FieldItemListInterface<\Drupal\Core\Field\FieldItemInterface>[]
+   *   The fields, keyed by name.
    */
-  public function move(ParagraphInterface $paragraph, string $direction): bool {
-    $items = $this->items($paragraph) ?? throw new \LogicException('The paragraph has no parent.');
-    $values = $items->getValue();
-    $from = $this->delta($items, $paragraph);
-    $to = $direction === 'up' ? $from - 1 : $from + 1;
-    if (!isset($values[$to])) {
-      return FALSE;
+  public function sectionFields(ContentEntityInterface $entity, AccountInterface $account): array {
+    $fields = [];
+    foreach ($entity->getFields(FALSE) as $name => $items) {
+      $definition = $items->getFieldDefinition();
+      if ($definition->getType() === 'entity_reference_revisions'
+        && $definition->getSetting('target_type') === 'paragraph'
+        && ($definition->isTranslatable() || $entity->isDefaultTranslation())
+        && $items->access('edit', $account)) {
+        $fields[$name] = $items;
+      }
     }
-    [$values[$from], $values[$to]] = [$values[$to], $values[$from]];
-    $items->setValue($values);
-    $parent = $paragraph->getParentEntity();
-    $root = $parent instanceof ParagraphInterface ? $this->attach($parent) : $parent;
-    $this->saveRoot($root, (string) $this->t('Moved @section from the frontend preview.', ['@section' => $paragraph->getParagraphType()->label()]));
-    return TRUE;
+    return $fields;
   }
 
   /**

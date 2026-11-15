@@ -95,6 +95,7 @@ final class EditFormTest extends BrowserTestBase {
     $count = $this->revisionCount($this->node);
     $this->drupalGet('headless-frontend-editing/edit/en/node:' . $this->node->uuid() . ':title');
     $this->assertSession()->fieldNotExists('body[0][value]');
+    $this->assertSession()->elementTextEquals('css', 'title', 'Edit Title | Drupal');
     $this->assertSession()->elementExists('css', '.hfe-sidebar-page');
     $this->submitForm(['title[0][value]' => 'Changed'], 'Save');
     $node = $this->storage()->load($this->node->id());
@@ -113,6 +114,7 @@ final class EditFormTest extends BrowserTestBase {
   public function testWholeNode(): void {
     $this->loginEditor();
     $this->drupalGet('headless-frontend-editing/edit/en/node:' . $this->node->uuid());
+    $this->assertSession()->elementTextEquals('css', 'title', 'Edit page | Drupal');
     $this->assertSession()->fieldExists('title[0][value]');
     $this->assertSession()->fieldExists('body[0][value]');
     $this->assertSession()->fieldNotExists('revision_log[0][value]');

@@ -4,19 +4,24 @@ declare(strict_types=1);
 
 namespace Drupal\headless_frontend_editing;
 
+use Drupal\Component\Utility\Html;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\ContentEntityTypeInterface;
 use Drupal\Core\Entity\EntityRepositoryInterface;
+use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 
 /**
  * Turns a target string into the entity (translation) and field it names.
  */
 final class TargetResolver {
+
+  use StringTranslationTrait;
 
   public const PATTERN = '/^([a-z_]+):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?::([a-z0-9_]+))?$/';
 
@@ -24,6 +29,7 @@ final class TargetResolver {
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly EntityRepositoryInterface $entityRepository,
     private readonly ModuleHandlerInterface $moduleHandler,
+    private readonly EntityTypeBundleInfoInterface $bundleInfo,
   ) {}
 
   /**
@@ -79,6 +85,40 @@ final class TargetResolver {
       return AccessResult::forbidden()->addCacheableDependency($result)->addCacheableDependency($hooks)->setCacheMaxAge(0);
     }
     return AccessResult::allowed()->addCacheableDependency($result)->addCacheableDependency($hooks);
+  }
+
+  /**
+   * Describes a target: its label and actions, as describe returns them.
+   *
+   * Runs hook_headless_frontend_editing_target_alter(). Does not check
+   * access.
+   *
+   * @return array<string, mixed>
+   *   The description: id, lang, label and actions (each with id, label and
+   *   disabled), all plain text.
+   */
+  public function describe(Target $target, string $lang): array {
+    $entity = $target->entity;
+    if ($target->fieldName === NULL) {
+      $bundle = $this->bundleInfo->getBundleInfo($entity->getEntityTypeId())[$entity->bundle()]['label'] ?? $entity->bundle();
+      $name = (string) $entity->label();
+      $label = $this->t('@label (@bundle)', ['@label' => $name, '@bundle' => $bundle]);
+      $action = $this->t('Edit @label', ['@label' => $name]);
+    }
+    else {
+      $label = $entity->get($target->fieldName)->getFieldDefinition()->getLabel();
+      $action = $this->t('Edit @label', ['@label' => $label]);
+    }
+    $description = [
+      'id' => $target->id(),
+      'lang' => $lang,
+      // Plain text: the client sets it with textContent, so undo the escaping
+      // of the @ placeholders.
+      'label' => Html::decodeEntities((string) $label),
+      'actions' => [['id' => 'edit', 'label' => Html::decodeEntities((string) $action), 'disabled' => FALSE]],
+    ];
+    $this->moduleHandler->alter('headless_frontend_editing_target', $description, $target);
+    return $description;
   }
 
 }

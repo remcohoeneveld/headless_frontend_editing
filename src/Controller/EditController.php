@@ -51,6 +51,20 @@ final class EditController extends ControllerBase {
   }
 
   /**
+   * Returns the title of the edit form: the target's edit action.
+   */
+  public function title(string $langcode, string $target): string {
+    $resolved = $this->resolver->resolve($target, $langcode);
+    if (!$resolved) {
+      return (string) $this->t('Edit');
+    }
+    if ($resolved->fieldName === NULL && $resolved->entity->getEntityTypeId() === 'node') {
+      return (string) $this->t('Edit page');
+    }
+    return $this->resolver->describe($resolved, $langcode)['actions'][0]['label'];
+  }
+
+  /**
    * Checks access to the target, see TargetResolver::access().
    *
    * Targets that do not resolve are let through, so edit() can answer 404.

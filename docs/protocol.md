@@ -36,7 +36,8 @@ or an ancestor, else `<html lang>`.
 | `/headless-frontend-editing/token` | GET; fresh preview token for the signed-in editor |
 | `/headless-frontend-editing/edit/{langcode}/{target}` | the edit form in the sidebar |
 | `/headless-frontend-editing/saved` | shown after saving |
-| `/headless-frontend-editing/paragraph/{uuid}/…` | submodule: add, move (POST), delete |
+| `/headless-frontend-editing/paragraph/{uuid}/…` | submodule: add, delete |
+| `/headless-frontend-editing/sections/{langcode}/{target}` | submodule: page layout, reorders the sections of an entity target |
 
 ## Soft navigation
 

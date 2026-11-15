@@ -10,26 +10,28 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
 use Drupal\headless_frontend_editing\Hook\EntityFormHooks;
+use Drupal\headless_frontend_editing\TargetResolver;
+use Drupal\headless_frontend_editing_paragraphs\Form\SectionOrderForm;
 use Drupal\headless_frontend_editing_paragraphs\ParagraphTree;
 use Drupal\paragraphs\ParagraphInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Adds and moves sections from the frontend preview.
+ * Adds sections from the frontend preview, and checks access to section routes.
  */
 final class ParagraphController extends ControllerBase {
 
   public function __construct(
     private readonly ParagraphTree $tree,
+    private readonly TargetResolver $resolver,
   ) {}
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get(ParagraphTree::class));
+    return new static($container->get(ParagraphTree::class), $container->get(TargetResolver::class));
   }
 
   /**
@@ -99,13 +101,6 @@ final class ParagraphController extends ControllerBase {
   }
 
   /**
-   * Swaps a section with its neighbor.
-   */
-  public function move(string $uuid, string $direction): JsonResponse {
-    return new JsonResponse(['moved' => $this->tree->move($this->load($uuid), $direction)]);
-  }
-
-  /**
    * Checks update access to the root and edit access to the section fields.
    *
    * Sections are changed in their own language, which is the page's language
@@ -129,6 +124,25 @@ final class ParagraphController extends ControllerBase {
     return $paragraph
       ? $this->access($account, $uuid)->andIf($paragraph->access('delete', $account, TRUE))
       : AccessResult::allowed()->setCacheMaxAge(0);
+  }
+
+  /**
+   * Checks access to the page layout of an entity.
+   *
+   * Needs edit access to the entity as a whole (TargetResolver::access(),
+   * which also refuses pending drafts) and at least one section field the
+   * user may reorder. Targets that do not name a whole, non-composite entity
+   * are let through, so the form can answer 404.
+   */
+  public function orderAccess(AccountInterface $account, string $langcode, string $target): AccessResultInterface {
+    $resolved = SectionOrderForm::resolve($this->resolver, $target, $langcode);
+    if (!$resolved) {
+      return AccessResult::allowed()->setCacheMaxAge(0);
+    }
+    $result = $this->resolver->access($resolved, $account);
+    return $result->isAllowed() && $this->tree->sectionFields($resolved->entity, $account)
+      ? $result
+      : AccessResult::forbidden()->addCacheableDependency($result)->setCacheMaxAge(0);
   }
 
   /**

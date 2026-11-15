@@ -93,19 +93,15 @@ final class ParagraphActionsTest extends KernelTestBase {
   }
 
   /**
-   * Tests the disabled flags at the first, middle and last position.
+   * Tests that every position gets the same, enabled actions.
    */
   public function testPositions(): void {
     [$first, $middle, $last] = $this->sections(3);
     $actions = $this->actions([$first, $middle, $last]);
-    $all = ['edit', 'up', 'down', 'delete', 'add-before', 'add-after'];
-    $this->assertSame($all, array_keys($actions['paragraph:' . $first->uuid()]));
-    $this->assertTrue($actions['paragraph:' . $first->uuid()]['up']);
-    $this->assertFalse($actions['paragraph:' . $first->uuid()]['down']);
-    $this->assertFalse($actions['paragraph:' . $middle->uuid()]['up']);
-    $this->assertFalse($actions['paragraph:' . $middle->uuid()]['down']);
-    $this->assertTrue($actions['paragraph:' . $last->uuid()]['down']);
-    $this->assertFalse($actions['paragraph:' . $last->uuid()]['delete']);
+    $all = ['edit', 'add-before', 'add-after', 'delete'];
+    foreach ([$first, $middle, $last] as $section) {
+      $this->assertSame(array_fill_keys($all, FALSE), $actions['paragraph:' . $section->uuid()]);
+    }
   }
 
   /**
@@ -122,14 +118,12 @@ final class ParagraphActionsTest extends KernelTestBase {
   }
 
   /**
-   * Tests that the only section cannot be deleted or moved.
+   * Tests that the only section cannot be deleted.
    */
   public function testOnlySection(): void {
     [$only] = $this->sections(1);
     $actions = $this->actions([$only])['paragraph:' . $only->uuid()];
     $this->assertTrue($actions['delete']);
-    $this->assertTrue($actions['up']);
-    $this->assertTrue($actions['down']);
     $this->assertFalse($actions['add-after']);
   }
 
@@ -220,7 +214,7 @@ final class ParagraphActionsTest extends KernelTestBase {
     $sibling = Paragraph::create(['type' => 'text']);
     $group = Paragraph::create(['type' => 'group', 'field_children' => [$child, $sibling]]);
     Node::create(['type' => 'page', 'title' => 'Page', 'field_sections' => [$group]])->save();
-    $this->assertContains('up', array_keys($this->actions([$child])['paragraph:' . $child->uuid()]));
+    $this->assertContains('delete', array_keys($this->actions([$child])['paragraph:' . $child->uuid()]));
 
     // A locked ancestor field counts too, also for editing the section.
     $this->container->get('state')->set(LockedFieldHooks::STATE, 'field_sections');

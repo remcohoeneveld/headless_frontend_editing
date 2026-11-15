@@ -11,7 +11,8 @@
 #}
 <main class="hfe-sidebar-page">
   {% if page['#title'] %}
-    <h1 class="hfe-sidebar-page__title">{{ page['#title'] }}</h1>
+    {# The host shows this title in its sidebar header. #}
+    <h1 class="hfe-sidebar-page__title visually-hidden">{{ page['#title'] }}</h1>
   {% endif %}
   {{ page.highlighted }}
   {{ page.content }}

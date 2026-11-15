@@ -2,6 +2,7 @@
    !important on the few properties that must win. */
 .hfe-order__type {
   display: block;
+  hyphens: none !important;
 }
 
 .hfe-order__summary {
@@ -33,4 +34,12 @@
 
 .hfe-order__add:hover {
   border-style: solid;
+}
+
+/* A phone-wide sidebar: the links under each other leave the section room. */
+@media (max-width: 28rem) {
+  .hfe-order__actions {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
 }

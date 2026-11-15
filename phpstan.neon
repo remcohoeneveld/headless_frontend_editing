@@ -1,4 +1,10 @@
 parameters:
   level: 6
+  # All of the module's PHP: the paragraphs submodule and the tests too.
   paths:
-    - src
+    - .
+  excludePaths:
+    analyseAndScan:
+      - .ddev (?)
+      - vendor (?)
+      - web (?)

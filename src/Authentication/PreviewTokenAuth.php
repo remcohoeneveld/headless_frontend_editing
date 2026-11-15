@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * Authentication runs before routing, so requests are classified by method
  * and by the configured GraphQL server endpoints. Anything that could write
- * stays anonymous. This is a first gate only: GraphQL operations are checked
+ * stays anonymous. This is the first gate only: GraphQL operations are checked
  * again after routing by PreviewTokenReadOnlySubscriber.
  */
 final class PreviewTokenAuth implements AuthenticationProviderInterface {

@@ -291,12 +291,14 @@ final class ParagraphRoutesTest extends BrowserTestBase {
     $this->assertSession()->addressEquals(Url::fromRoute('headless_frontend_editing.saved'));
     $this->assertSame(['First', 'Between', 'Second'], $this->texts());
     $this->assertSame('Added text from the frontend preview.', $this->reload()->getRevisionLogMessage());
+    $this->assertSession()->elementAttributeContains('css', '.hfe-saved', 'data-hfe-message', 'text added.');
 
     $target = 'paragraph:' . $this->second->uuid();
     $this->drupalGet(Url::fromRoute('headless_frontend_editing.edit', ['langcode' => 'en', 'target' => $target]));
     $this->submitForm(['field_text[0][value]' => 'Changed'], 'Save');
     $this->assertSame(['First', 'Between', 'Changed'], $this->texts());
     $this->assertSame('Updated text from the frontend preview.', $this->reload()->getRevisionLogMessage());
+    $this->assertSession()->elementAttributeContains('css', '.hfe-saved', 'data-hfe-message', 'text saved.');
 
     $this->drupalGet(Url::fromRoute('headless_frontend_editing_paragraphs.add_form', [
       'uuid' => $this->first->uuid(),

@@ -114,7 +114,9 @@ final class ParagraphDeleteForm extends ConfirmFormBase {
     $items->removeItem($this->tree->delta($items, $this->paragraph));
     $parent = $this->paragraph->getParentEntity();
     $root = $parent instanceof ParagraphInterface ? $this->tree->attach($parent) : $parent;
-    $this->tree->saveRoot($root, (string) $this->t('Deleted @section from the frontend preview.', ['@section' => $this->paragraph->getParagraphType()->label()]));
+    $args = ['@section' => $this->paragraph->getParagraphType()->label()];
+    $this->tree->saveRoot($root, (string) $this->t('Deleted @section from the frontend preview.', $args));
+    $this->messenger()->addStatus($this->t('@section deleted.', $args));
     $form_state->setRedirect('headless_frontend_editing.saved');
   }
 

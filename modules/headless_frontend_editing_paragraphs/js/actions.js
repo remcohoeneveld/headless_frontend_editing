@@ -52,7 +52,10 @@
           fetch(move, { method: 'POST', headers: { 'X-CSRF-Token': token } }),
         )
         .then(ok)
-        .then(() => window.location.reload())
+        .then(() => {
+          hfe.flash(Drupal.t('Section moved.'));
+          window.location.reload();
+        })
         .catch((error) => {
           // eslint-disable-next-line no-console
           console.warn('Headless frontend editing:', error);

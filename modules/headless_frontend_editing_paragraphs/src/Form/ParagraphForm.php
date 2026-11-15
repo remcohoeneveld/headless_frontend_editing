@@ -54,6 +54,8 @@ final class ParagraphForm extends ContentEntityForm {
     $this->tree->saveRoot($root, (string) ($insert
       ? $this->t('Added @section from the frontend preview.', $args)
       : $this->t('Updated @section from the frontend preview.', $args)));
+    // Shown by the editing host once the preview has reloaded.
+    $this->messenger()->addStatus($insert ? $this->t('@section added.', $args) : $this->t('@section saved.', $args));
     return $insert ? SAVED_NEW : SAVED_UPDATED;
   }
 

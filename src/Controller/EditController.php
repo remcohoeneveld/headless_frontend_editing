@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\headless_frontend_editing\Controller;
 
+use Drupal\Component\Utility\Html;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\headless_frontend_editing\FieldFocus;
 use Drupal\headless_frontend_editing\Hook\EntityFormHooks;
@@ -77,13 +79,21 @@ final class EditController extends ControllerBase {
   /**
    * Tells the editing host the form was saved.
    *
+   * The form's status messages, such as core's "Page X has been updated.",
+   * go to the host as plain text, which shows them once the preview has
+   * reloaded.
+   *
    * @return array<string, mixed>
    *   A render array.
    */
   public function saved(): array {
+    $messages = array_map(
+      fn ($message) => trim(Html::decodeEntities(strip_tags((string) $message))),
+      $this->messenger()->deleteByType(MessengerInterface::TYPE_STATUS),
+    );
     return [
       '#type' => 'container',
-      '#attributes' => ['class' => ['hfe-saved']],
+      '#attributes' => ['class' => ['hfe-saved'], 'data-hfe-message' => implode(' ', $messages)],
       'message' => ['#markup' => $this->t('Saved. Updating the preview…')],
       '#cache' => ['max-age' => 0],
     ];

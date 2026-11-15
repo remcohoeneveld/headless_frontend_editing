@@ -41,8 +41,11 @@
         // CKEditor 5 only reports changes through this jQuery event.
         $(form).on('formUpdated', schedule);
       });
-      once('hfe-saved', '.hfe-saved', context).forEach(() => {
-        notify({ type: 'hfe:saved' });
+      once('hfe-saved', '.hfe-saved', context).forEach((saved) => {
+        notify({
+          type: 'hfe:saved',
+          message: saved.getAttribute('data-hfe-message') || '',
+        });
       });
     },
   };

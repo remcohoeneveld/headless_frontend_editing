@@ -38,6 +38,23 @@
     );
   };
 
+  const FLASH_KEY = 'headlessFrontendEditing.flash';
+  const FLASH_TIME = 4000;
+
+  /**
+   * Keeps a confirmation to show after the page reloads.
+   *
+   * @param {string} message
+   *   Plain text, such as "Page saved.".
+   */
+  hfe.flash = (message) => {
+    try {
+      window.sessionStorage.setItem(FLASH_KEY, message);
+    } catch (e) {
+      // Not shown: the reload itself is the confirmation.
+    }
+  };
+
   // Elements and settings are looked up on use: the message listener below is
   // registered before behaviors attach, so no early message is lost.
   const preview = () => document.querySelector('.hfe-preview');
@@ -239,10 +256,46 @@
         live = true;
         show(data.path);
       } else if (data.type === 'hfe:saved') {
+        hfe.flash(
+          (typeof data.message === 'string' && data.message.trim()) ||
+            Drupal.t('Saved.'),
+        );
         window.location.reload();
       }
     }
   });
+
+  // The confirmation kept by hfe.flash() before the reload, above the dock.
+  Drupal.behaviors.headlessFrontendEditingFlash = {
+    attach(context) {
+      once('hfe-flash', '.hfe-preview', context).forEach(() => {
+        let message = null;
+        try {
+          message = window.sessionStorage.getItem(FLASH_KEY);
+          window.sessionStorage.removeItem(FLASH_KEY);
+        } catch (e) {
+          return;
+        }
+        if (!message) {
+          return;
+        }
+        const toast = document.createElement('div');
+        toast.className = 'hfe-toast';
+        toast.setAttribute('role', 'status');
+        document.body.append(toast);
+        // Filled after insertion, so screen readers announce it.
+        setTimeout(() => {
+          toast.textContent = message;
+        }, 100);
+        setTimeout(() => {
+          toast.classList.add('hfe-toast--out');
+          toast.addEventListener('animationend', () => toast.remove());
+          // Without animations (reduced motion), animationend never comes.
+          setTimeout(() => toast.remove(), 400);
+        }, FLASH_TIME);
+      });
+    },
+  };
 
   // The dock's menu: page status, tabs and link. Closes like a menu.
   Drupal.behaviors.headlessFrontendEditingPanel = {

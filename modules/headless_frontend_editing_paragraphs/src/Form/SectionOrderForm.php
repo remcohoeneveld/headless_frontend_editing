@@ -276,6 +276,7 @@ final class SectionOrderForm extends FormBase {
       $this->tree->saveRoot($this->entity, (string) $this->t('Reordered sections from the frontend preview.'));
     }
     $this->livePreview->delete($this->entity);
+    $this->messenger()->addStatus($this->t('Section order saved.'));
     $form_state->setRedirect('headless_frontend_editing.saved');
   }
 

@@ -105,6 +105,9 @@ final class EditFormTest extends BrowserTestBase {
     $this->assertSession()->addressEquals('headless-frontend-editing/saved');
     $this->assertSession()->pageTextContains('Saved. Updating the preview');
     $this->assertSession()->elementExists('css', '.hfe-sidebar-page .hfe-saved');
+    // Core's save message goes to the host as plain text, not to this page.
+    $this->assertSession()->elementAttributeContains('css', '.hfe-saved', 'data-hfe-message', 'Changed has been updated.');
+    $this->assertSession()->elementNotExists('css', '[data-drupal-messages] .messages--status');
     $this->assertSession()->responseContains('js/sidebar.js');
   }
 

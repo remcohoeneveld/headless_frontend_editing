@@ -16,10 +16,11 @@ use Drupal\headless_frontend_editing_paragraphs\Form\SectionOrderForm;
 use Drupal\headless_frontend_editing_paragraphs\ParagraphTree;
 use Drupal\paragraphs\ParagraphInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Adds sections from the frontend preview, and checks access to section routes.
+ * Adds and moves sections from the preview, and checks section route access.
  */
 final class ParagraphController extends ControllerBase {
 
@@ -91,6 +92,13 @@ final class ParagraphController extends ControllerBase {
       'hfe' => TRUE,
       'hfe_insert' => [$anchor, $position],
     ]);
+  }
+
+  /**
+   * Swaps a section with its neighbor.
+   */
+  public function move(string $uuid, string $direction): JsonResponse {
+    return new JsonResponse(['moved' => $this->tree->move($this->load($uuid), $direction)]);
   }
 
   /**

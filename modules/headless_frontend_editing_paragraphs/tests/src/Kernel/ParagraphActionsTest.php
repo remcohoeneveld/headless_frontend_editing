@@ -93,15 +93,19 @@ final class ParagraphActionsTest extends KernelTestBase {
   }
 
   /**
-   * Tests that every position gets the same, enabled actions.
+   * Tests the disabled flags at the first, middle and last position.
    */
   public function testPositions(): void {
     [$first, $middle, $last] = $this->sections(3);
     $actions = $this->actions([$first, $middle, $last]);
-    $all = ['edit', 'add-before', 'add-after', 'delete'];
-    foreach ([$first, $middle, $last] as $section) {
-      $this->assertSame(array_fill_keys($all, FALSE), $actions['paragraph:' . $section->uuid()]);
-    }
+    $all = ['edit', 'up', 'down', 'add-before', 'add-after', 'delete'];
+    $this->assertSame($all, array_keys($actions['paragraph:' . $first->uuid()]));
+    $this->assertTrue($actions['paragraph:' . $first->uuid()]['up']);
+    $this->assertFalse($actions['paragraph:' . $first->uuid()]['down']);
+    $this->assertFalse($actions['paragraph:' . $middle->uuid()]['up']);
+    $this->assertFalse($actions['paragraph:' . $middle->uuid()]['down']);
+    $this->assertTrue($actions['paragraph:' . $last->uuid()]['down']);
+    $this->assertFalse($actions['paragraph:' . $last->uuid()]['delete']);
   }
 
   /**
@@ -118,12 +122,14 @@ final class ParagraphActionsTest extends KernelTestBase {
   }
 
   /**
-   * Tests that the only section cannot be deleted.
+   * Tests that the only section cannot be deleted or moved.
    */
   public function testOnlySection(): void {
     [$only] = $this->sections(1);
     $actions = $this->actions([$only])['paragraph:' . $only->uuid()];
     $this->assertTrue($actions['delete']);
+    $this->assertTrue($actions['up']);
+    $this->assertTrue($actions['down']);
     $this->assertFalse($actions['add-after']);
   }
 

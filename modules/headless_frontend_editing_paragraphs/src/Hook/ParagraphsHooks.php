@@ -151,8 +151,8 @@ final class ParagraphsHooks {
   /**
    * Implements hook_headless_frontend_editing_target_alter().
    *
-   * Adds deleting and adding sections to paragraph targets. Reordering is
-   * done in the page layout (SectionOrderForm).
+   * Adds moving, adding and deleting sections to paragraph targets. The page
+   * layout (SectionOrderForm) reorders them all at once.
    *
    * @param array<string, mixed> $description
    *   The target description.
@@ -174,9 +174,13 @@ final class ParagraphsHooks {
     if (!$this->canRearrange($paragraph)) {
       return;
     }
-    $count = count($this->tree->items($paragraph));
+    $items = $this->tree->items($paragraph);
+    $count = count($items);
+    $delta = $this->tree->delta($items, $paragraph);
     $full = !$this->tree->allowedTypes($paragraph);
     foreach ([
+      'up' => [$this->t('Move up'), $delta === 0],
+      'down' => [$this->t('Move down'), $delta === $count - 1],
       'add-before' => [$this->t('Add section above'), $full],
       'add-after' => [$this->t('Add section below'), $full],
       // Last: the one action that removes something.
@@ -187,9 +191,9 @@ final class ParagraphsHooks {
   }
 
   /**
-   * Whether sections may be added or deleted next to this one.
+   * Whether sections may be added, moved or deleted next to this one.
    *
-   * Adding or deleting changes the reference field of every parent up
+   * Adding, moving or deleting changes the reference field of every parent up
    * to the root. When one of them is not translatable, that change reaches all
    * languages, so it is only offered in the root's default translation.
    */

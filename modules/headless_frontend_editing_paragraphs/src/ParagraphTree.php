@@ -60,7 +60,7 @@ final class ParagraphTree {
   }
 
   /**
-   * Checks access to add or delete sections next to a paragraph.
+   * Checks access to add, move or delete sections next to a paragraph.
    *
    * That changes the reference field of every parent up to the root, so it
    * needs update access to the root and edit access to each of those fields.
@@ -166,6 +166,28 @@ final class ParagraphTree {
       }
     }
     throw new \LogicException('The paragraph is not referenced by its parent field.');
+  }
+
+  /**
+   * Swaps a paragraph with its neighbor and saves the root.
+   *
+   * @return bool
+   *   FALSE when there is no neighbor in that direction.
+   */
+  public function move(ParagraphInterface $paragraph, string $direction): bool {
+    $items = $this->items($paragraph) ?? throw new \LogicException('The paragraph has no parent.');
+    $values = $items->getValue();
+    $from = $this->delta($items, $paragraph);
+    $to = $direction === 'up' ? $from - 1 : $from + 1;
+    if (!isset($values[$to])) {
+      return FALSE;
+    }
+    [$values[$from], $values[$to]] = [$values[$to], $values[$from]];
+    $items->setValue($values);
+    $parent = $paragraph->getParentEntity();
+    $root = $parent instanceof ParagraphInterface ? $this->attach($parent) : $parent;
+    $this->saveRoot($root, (string) $this->t('Moved @section from the frontend preview.', ['@section' => $paragraph->getParagraphType()->label()]));
+    return TRUE;
   }
 
   /**

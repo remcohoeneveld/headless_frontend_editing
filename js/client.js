@@ -23,7 +23,23 @@
     .outline {
       position: fixed;
       border-radius: 2px;
+      /* A tint over the whole section shows where it starts and ends. */
+      background: #6e56ff12;
       box-shadow: 0 0 0 1px #fff, 0 0 0 3px #6e56ff;
+    }
+    /* Appearing fades in; moving to another target glides there. */
+    .outline:not([hidden]) { animation: hfe-in 0.16s ease-out; }
+    .toolbar:not([hidden]) { animation: hfe-tab 0.18s ease-out; }
+    .glide {
+      transition-property: top, left, width, height;
+      transition-duration: 0.22s;
+      transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    @keyframes hfe-in { from { opacity: 0; } }
+    @keyframes hfe-tab { from { opacity: 0; transform: translateY(4px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .outline, .toolbar { animation: none !important; }
+      .glide { transition: none; }
     }
     .toolbar {
       position: fixed;
@@ -76,6 +92,8 @@
   // Icons for known actions; other actions show their label.
   const ICONS = {
     edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4',
+    up: 'M12 19V5M6 11l6-6 6 6',
+    down: 'M12 5v14M6 13l6 6 6-6',
     'add-before': 'M5 20h14M12 4v10M7 9h10',
     'add-after': 'M5 4h14M12 10v10M7 15h10',
     delete: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
@@ -111,6 +129,10 @@
   const RETRIES = [500, 1000, 2000, 4000, 8000];
   // How long the pointer may cross another target on its way to the toolbar.
   const SWITCH_DELAY = 300;
+  // Actions that start a group of their own in the toolbar.
+  const GROUPS = new Set(['up', 'add-before', 'delete']);
+  // The target just moved: shown again after the page reloads.
+  const MOVED_KEY = 'headlessFrontendEditing.moved';
 
   const post = (message) => {
     window.parent.postMessage({ v: 1, ...message }, drupalOrigin);
@@ -209,8 +231,19 @@
       });
     };
 
+    let glideTimer;
     const show = (element) => {
       const description = element && descriptions.get(keyOf(element));
+      // From one target straight to the next: glide, instead of jumping.
+      const glide = !!(current && description && element !== current);
+      outline.classList.toggle('glide', glide);
+      toolbar.classList.toggle('glide', glide);
+      clearTimeout(glideTimer);
+      // Scrolling repositions at once: the glide is only for the switch.
+      glideTimer = setTimeout(() => {
+        outline.classList.remove('glide');
+        toolbar.classList.remove('glide');
+      }, 250);
       current = description ? element : null;
       outline.hidden = !current;
       toolbar.hidden = !current;
@@ -244,7 +277,15 @@
           } else {
             button.textContent = action.label;
           }
+          button.dataset.action = action.id;
           button.addEventListener('click', () => {
+            if (action.id === 'up' || action.id === 'down') {
+              try {
+                window.sessionStorage.setItem(MOVED_KEY, description.id);
+              } catch (e) {
+                // Not kept: the page reloads at its top.
+              }
+            }
             post({
               type: 'hfe:action',
               target: description.id,
@@ -254,16 +295,38 @@
           });
           return button;
         });
-      // A divider between the main action and the rest.
-      const sep = document.createElement('span');
-      sep.className = 'sep';
-      toolbar.replaceChildren(
-        label,
-        ...buttons.slice(0, 1),
-        ...(buttons.length > 1 ? [sep] : []),
-        ...buttons.slice(1),
-      );
+      // Dividers after the main action and between groups of actions.
+      const children = [label];
+      buttons.forEach((button, i) => {
+        if (i === 1 || (i > 1 && GROUPS.has(button.dataset.action))) {
+          const sep = document.createElement('span');
+          sep.className = 'sep';
+          children.push(sep);
+        }
+        children.push(button);
+      });
+      toolbar.replaceChildren(...children);
       place();
+    };
+
+    // After a move reloads the page, brings the moved target back into view.
+    const restoreMoved = () => {
+      let id = null;
+      try {
+        id = window.sessionStorage.getItem(MOVED_KEY);
+        window.sessionStorage.removeItem(MOVED_KEY);
+      } catch (e) {
+        return;
+      }
+      const element =
+        id &&
+        [...document.querySelectorAll('[data-hfe]')].find(
+          (candidate) => descriptions.get(keyOf(candidate))?.id === id,
+        );
+      if (element) {
+        element.scrollIntoView({ block: 'center' });
+        show(element);
+      }
     };
 
     // The toolbar sits above its target, over the edge of the section before
@@ -280,7 +343,16 @@
       if (element === current) {
         return;
       }
-      if (current && event.type === 'mouseover') {
+      // Only in the strip above the target, where its tab is: elsewhere the
+      // toolbar follows the pointer at once.
+      const top = current && current.getBoundingClientRect().top;
+      if (
+        current &&
+        event.type === 'mouseover' &&
+        !toolbar.classList.contains('inside') &&
+        event.clientY < top &&
+        event.clientY > top - toolbar.offsetHeight - 12
+      ) {
         pending = setTimeout(() => show(element), SWITCH_DELAY);
       } else {
         show(element);
@@ -388,6 +460,7 @@
             descriptions.set(`${target.id}|${target.lang}`, target);
           }
         });
+        restoreMoved();
       } else if (
         data.type === 'hfe:show' &&
         typeof data.path === 'string' &&

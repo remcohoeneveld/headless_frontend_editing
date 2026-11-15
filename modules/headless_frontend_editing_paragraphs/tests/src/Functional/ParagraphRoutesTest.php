@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\headless_frontend_editing_paragraphs\Functional;
 
 use Drupal\Core\Url;
+use GuzzleHttp\RequestOptions;
 use Drupal\headless_frontend_editing_paragraphs_test\Hook\LockedFieldHooks;
 use Drupal\headless_frontend_editing_paragraphs_test\Hook\ParagraphAccessHooks;
 use Drupal\node\NodeInterface;
@@ -99,6 +100,40 @@ final class ParagraphRoutesTest extends BrowserTestBase {
   private function texts(): array {
     \Drupal::entityTypeManager()->getStorage('paragraph')->resetCache();
     return array_map(fn ($paragraph) => $paragraph->get('field_text')->value, $this->reload()->get('field_sections')->referencedEntities());
+  }
+
+  /**
+   * POSTs a move, with or without a CSRF token.
+   */
+  private function move(string $direction, bool $token): int {
+    $parameters = ['uuid' => $this->first->uuid(), 'direction' => $direction];
+    $url = Url::fromRoute('headless_frontend_editing_paragraphs.move', $parameters)->setAbsolute()->toString();
+    $headers = [];
+    if ($token) {
+      $this->drupalGet('session/token');
+      $headers['X-CSRF-Token'] = $this->getSession()->getPage()->getContent();
+    }
+    $response = $this->getHttpClient()->request('POST', $url, [
+      RequestOptions::HEADERS => $headers,
+      RequestOptions::COOKIES => $this->getSessionCookies(),
+      RequestOptions::HTTP_ERRORS => FALSE,
+    ]);
+    return $response->getStatusCode();
+  }
+
+  /**
+   * Tests that moving needs the CSRF header and swaps the sections.
+   */
+  public function testMove(): void {
+    $this->login();
+    $revision = (int) $this->node->getRevisionId();
+    $this->assertSame(403, $this->move('down', FALSE));
+    $this->assertSame(['First', 'Second'], $this->texts());
+    $this->assertSame(200, $this->move('down', TRUE));
+    $this->assertSame(['Second', 'First'], $this->texts());
+    $node = $this->reload();
+    $this->assertGreaterThan($revision, (int) $node->getRevisionId());
+    $this->assertSame('Moved text from the frontend preview.', $node->getRevisionLogMessage());
   }
 
   /**
@@ -290,6 +325,7 @@ final class ParagraphRoutesTest extends BrowserTestBase {
       $this->drupalGet($url);
       $this->assertSession()->statusCodeEquals(403);
     }
+    $this->assertSame(403, $this->move('down', TRUE));
     $this->assertSame(['First', 'Second'], $this->texts());
   }
 
@@ -310,6 +346,7 @@ final class ParagraphRoutesTest extends BrowserTestBase {
       $this->drupalGet($url);
       $this->assertSession()->statusCodeEquals(403);
     }
+    $this->assertSame(403, $this->move('down', TRUE));
     $this->assertSame(['First', 'Second'], $this->texts());
   }
 
@@ -343,6 +380,7 @@ final class ParagraphRoutesTest extends BrowserTestBase {
       $this->drupalGet($url);
       $this->assertSession()->statusCodeEquals(403);
     }
+    $this->assertSame(403, $this->move('down', TRUE));
   }
 
 }

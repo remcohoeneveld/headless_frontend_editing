@@ -113,6 +113,18 @@ final class ParagraphTreeTest extends KernelTestBase {
   }
 
   /**
+   * Tests that moving the first item up is not possible.
+   */
+  public function testMoveBounds(): void {
+    [$node, $a, $b] = $this->page();
+    $this->setUpCurrentUser();
+    $this->assertFalse($this->tree->move(Paragraph::load($a->id()), 'up'));
+    $this->assertSame([(int) $a->id(), (int) $b->id()], $this->order($node));
+    $this->assertTrue($this->tree->move(Paragraph::load($a->id()), 'down'));
+    $this->assertSame([(int) $b->id(), (int) $a->id()], $this->order($node));
+  }
+
+  /**
    * Tests that saving the root adds a logged revision.
    */
   public function testSaveRootRevision(): void {

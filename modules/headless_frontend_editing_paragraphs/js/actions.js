@@ -1,6 +1,6 @@
 /**
  * @file
- * Section actions (add, delete) for paragraph targets.
+ * Section actions (move, add, delete) for paragraph targets.
  */
 
 /**
@@ -31,6 +31,34 @@
       ? Drupal.url(`headless-frontend-editing/paragraph/${match[1]}/${path}`)
       : null;
   };
+
+  const ok = (response) => {
+    if (!response.ok) {
+      throw new Error(`${response.url}: HTTP ${response.status}`);
+    }
+    return response;
+  };
+
+  ['up', 'down'].forEach((direction) => {
+    hfe.actions[direction] = (target) => {
+      const move = url(target, `move/${direction}`);
+      if (!move || !hfe.confirmDiscard()) {
+        return;
+      }
+      fetch(Drupal.url('session/token'))
+        .then(ok)
+        .then((response) => response.text())
+        .then((token) =>
+          fetch(move, { method: 'POST', headers: { 'X-CSRF-Token': token } }),
+        )
+        .then(ok)
+        .then(() => window.location.reload())
+        .catch((error) => {
+          // eslint-disable-next-line no-console
+          console.warn('Headless frontend editing:', error);
+        });
+    };
+  });
 
   Object.entries({
     delete: 'delete',

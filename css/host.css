@@ -50,6 +50,27 @@
   box-shadow: 0 0 1rem #0000004d;
 }
 
+.hfe-editor__close {
+  display: block;
+  margin-inline-start: auto;
+  cursor: pointer;
+  color: inherit;
+  border: 0;
+  background: none;
+  font: inherit;
+  block-size: 2.5rem;
+  padding-inline: 1rem;
+}
+
+.hfe-editor__close:hover {
+  text-decoration: underline;
+}
+
+.hfe-editor__close:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -4px;
+}
+
 .hfe-editor__frame {
   inline-size: 100%;
   block-size: calc(100% - 2.5rem);

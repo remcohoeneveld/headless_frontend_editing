@@ -71,7 +71,6 @@ final class EditController extends ControllerBase {
       '#type' => 'container',
       '#attributes' => ['class' => ['hfe-saved']],
       'message' => ['#markup' => $this->t('Saved. Updating the preview…')],
-      '#attached' => ['library' => ['headless_frontend_editing/sidebar']],
       '#cache' => ['max-age' => 0],
     ];
   }

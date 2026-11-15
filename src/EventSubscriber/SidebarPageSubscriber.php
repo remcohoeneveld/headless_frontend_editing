@@ -42,6 +42,7 @@ final class SidebarPageSubscriber implements EventSubscriberInterface {
     }
     // Like core's HtmlRenderer: a #title (confirm forms set one) wins.
     $title = $result['#title'] ?? $this->titleResolver->getTitle($request, $route);
+    $result['#attached']['library'][] = 'headless_frontend_editing/sidebar';
     $event->setResponse($this->bareHtmlPageRenderer->renderBarePage($result, $title ?? '', 'headless_frontend_editing_sidebar'));
   }
 

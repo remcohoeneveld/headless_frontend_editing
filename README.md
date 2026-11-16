@@ -24,7 +24,8 @@ preview shows each new order before it is saved.
 
 ## Requirements
 
-- Drupal core ^11.4 or ^12, PHP 8.3 or newer.
+- Drupal core ^11.4 or ^12, PHP 8.3 or newer. This is the 2.x line; for
+  Drupal 10 use 1.x.
 - A GraphQL (for example GraphQL Compose) or JSON:API endpoint the frontend reads from.
 - Paragraphs, only for the submodule.
 

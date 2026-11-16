@@ -10,3 +10,5 @@ revalidation
 revalidator
 uncompiled
 unconfigured
+Csvg
+Cpath

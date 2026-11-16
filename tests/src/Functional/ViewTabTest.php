@@ -8,14 +8,13 @@ use Drupal\Core\Url;
 use Drupal\node\NodeInterface;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\Tests\node\Traits\NodeCreationTrait;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests the decoupled frontend on the node view tab.
+ *
+ * @group headless_frontend_editing
+ * @runTestsInSeparateProcesses
  */
-#[Group('headless_frontend_editing')]
-#[RunTestsInSeparateProcesses]
 final class ViewTabTest extends BrowserTestBase {
 
   use NodeCreationTrait;

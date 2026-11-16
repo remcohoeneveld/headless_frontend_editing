@@ -9,14 +9,13 @@ use Drupal\node\NodeInterface;
 use Drupal\node\NodeStorageInterface;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\Tests\content_moderation\Traits\ContentModerationTestTrait;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests editing entities and fields in the sidebar form.
+ *
+ * @group headless_frontend_editing
+ * @runTestsInSeparateProcesses
  */
-#[Group('headless_frontend_editing')]
-#[RunTestsInSeparateProcesses]
 final class EditFormTest extends BrowserTestBase {
 
   use ContentModerationTestTrait;

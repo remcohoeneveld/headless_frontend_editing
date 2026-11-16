@@ -36,6 +36,21 @@ final class LivePreview {
   /**
    * Ajax callback of the hidden live preview button.
    *
+   * Drupal 10 only calls static "Class::method" callbacks, so this one hands
+   * over to the service.
+   *
+   * @param array<string, mixed> $form
+   *   The form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   */
+  public static function ajaxCallback(array &$form, FormStateInterface $form_state): AjaxResponse {
+    return \Drupal::service(self::class)->callback($form, $form_state);
+  }
+
+  /**
+   * Builds the live preview response.
+   *
    * @param array<string, mixed> $form
    *   The form.
    * @param \Drupal\Core\Form\FormStateInterface $form_state

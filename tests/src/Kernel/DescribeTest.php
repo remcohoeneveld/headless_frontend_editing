@@ -11,15 +11,14 @@ use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\content_moderation\Traits\ContentModerationTestTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Tests the describe and token endpoints.
+ *
+ * @group headless_frontend_editing
+ * @runTestsInSeparateProcesses
  */
-#[Group('headless_frontend_editing')]
-#[RunTestsInSeparateProcesses]
 final class DescribeTest extends KernelTestBase {
 
   use ContentModerationTestTrait;

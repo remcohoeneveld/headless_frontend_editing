@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\headless_frontend_editing\Kernel;
 
+use Drupal\Core\Cache\MemoryBackend;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\PageCache\ChainRequestPolicy;
 use Drupal\Core\PageCache\RequestPolicy\NoSessionOpen;
@@ -17,17 +18,16 @@ use Drupal\node\Entity\NodeType;
 use Drupal\node\NodeInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\UserInterface;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Tests the read-only preview token authentication provider.
+ *
+ * @group headless_frontend_editing
+ * @runTestsInSeparateProcesses
  */
-#[Group('headless_frontend_editing')]
-#[RunTestsInSeparateProcesses]
 final class PreviewTokenAuthTest extends KernelTestBase {
 
   use UserCreationTrait;
@@ -240,9 +240,13 @@ final class PreviewTokenAuthTest extends KernelTestBase {
   }
 
   /**
-   * Counts the items in a database cache bin.
+   * Counts the items in a cache bin.
    */
   private function countRows(object $bin): int {
+    // Drupal 10 kernel tests keep cache bins in memory.
+    if ($bin instanceof MemoryBackend) {
+      return count((new \ReflectionProperty($bin, 'cache'))->getValue($bin));
+    }
     $table = (new \ReflectionProperty($bin, 'bin'))->getValue($bin);
     return $this->container->get('database')->schema()->tableExists($table)
       ? (int) $this->container->get('database')->select($table)->countQuery()->execute()->fetchField()

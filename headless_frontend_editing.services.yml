@@ -1,4 +1,3 @@
-# Hooks are autowired classes in src/Hook.
 services:
   _defaults:
     autowire: true
@@ -34,3 +33,8 @@ services:
   Drupal\headless_frontend_editing\EventSubscriber\SidebarPageSubscriber:
     tags:
       - { name: event_subscriber }
+  Drupal\headless_frontend_editing\Hook\EntityFormHooks: {}
+  Drupal\headless_frontend_editing\Hook\HelpHooks: {}
+  Drupal\headless_frontend_editing\Hook\RequirementsHooks: {}
+  Drupal\headless_frontend_editing\Hook\RevalidateHooks: {}
+  Drupal\headless_frontend_editing\Hook\ThemeHooks: {}

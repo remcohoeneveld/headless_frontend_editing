@@ -98,6 +98,7 @@ final class PreviewController extends ControllerBase {
       $build['#attached']['page_top']['node_preview'] = [
         '#type' => 'container',
         '#attributes' => ['class' => ['node-preview-container', 'container-inline']],
+        // @phpstan-ignore arguments.count (Drupal 10 declares getForm() without its variadic arguments.)
         'view_mode' => $this->formBuilder->getForm(NodePreviewForm::class, $node_preview),
       ];
     }

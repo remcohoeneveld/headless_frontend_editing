@@ -19,15 +19,14 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Psr\Log\LoggerInterface;
 
 /**
  * Tests the on-demand frontend revalidation.
+ *
+ * @group headless_frontend_editing
+ * @runTestsInSeparateProcesses
  */
-#[Group('headless_frontend_editing')]
-#[RunTestsInSeparateProcesses]
 final class RevalidatorTest extends KernelTestBase {
 
   /**

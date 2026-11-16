@@ -13,14 +13,13 @@ use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\content_moderation\Traits\ContentModerationTestTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests that field targets get a form with only that field.
+ *
+ * @group headless_frontend_editing
+ * @runTestsInSeparateProcesses
  */
-#[Group('headless_frontend_editing')]
-#[RunTestsInSeparateProcesses]
 final class FieldFocusTest extends KernelTestBase {
 
   use ContentModerationTestTrait;
@@ -44,6 +43,8 @@ final class FieldFocusTest extends KernelTestBase {
     $this->installConfig(['system', 'node', 'filter', 'content_moderation', 'headless_frontend_editing']);
     $this->installSchema('node', ['node_access']);
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
+    // Drupal 10's node module installs a body field storage of its own.
+    FieldStorageConfig::loadByName('node', 'body')?->delete();
     foreach (['body', 'field_intro'] as $field_name) {
       FieldStorageConfig::create(['field_name' => $field_name, 'entity_type' => 'node', 'type' => 'string'])->save();
       FieldConfig::create(['field_name' => $field_name, 'entity_type' => 'node', 'bundle' => 'article'])->save();

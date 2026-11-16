@@ -7,6 +7,6 @@ include:
       - '/includes/include.drupalci.workflows.yml'
 
 variables:
-  OPT_IN_TEST_PREVIOUS_MINOR: 1
-  OPT_IN_TEST_NEXT_MINOR: 1
-  OPT_IN_TEST_NEXT_MAJOR: 1
+  # The 1.0.x branch is for Drupal 10 only (2.0.x is for Drupal 11 and 12):
+  # the default variant and the lint jobs run on the latest Drupal 10.
+  CORE_STABLE: $CORE_PREVIOUS_STABLE

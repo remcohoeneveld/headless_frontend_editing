@@ -10,13 +10,12 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Site\Settings;
 use Drupal\headless_frontend_editing\PreviewToken;
 use Drupal\Tests\UnitTestCase;
-use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Tests the signed preview token.
+ *
+ * @group headless_frontend_editing
  */
-#[Group('headless_frontend_editing')]
 class PreviewTokenTest extends UnitTestCase {
 
   /**
@@ -77,8 +76,9 @@ class PreviewTokenTest extends UnitTestCase {
 
   /**
    * Malformed tokens are rejected.
+   *
+   * @dataProvider malformedProvider
    */
-  #[DataProvider('malformedProvider')]
   public function testMalformed(string $value): void {
     $this->assertNull($this->token()->validate($value));
   }

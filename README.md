@@ -24,7 +24,8 @@ preview shows each new order before it is saved.
 
 ## Requirements
 
-- Drupal core ^11.4 or ^12, PHP 8.3 or newer.
+- Drupal core ^10.3, PHP 8.3 or newer. This is the 1.x line, for Drupal 10;
+  for Drupal 11.4 and 12 use 2.x.
 - A GraphQL (for example GraphQL Compose) or JSON:API endpoint the frontend reads from.
 - Paragraphs, only for the submodule.
 
@@ -32,7 +33,7 @@ preview shows each new order before it is saved.
 
 Install with Composer and enable the module:
 
-    composer require drupal/headless_frontend_editing
+    composer require 'drupal/headless_frontend_editing:^1.0@beta'
     drush en headless_frontend_editing
 
 ## Configuration

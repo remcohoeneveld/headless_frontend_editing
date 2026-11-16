@@ -1,4 +1,3 @@
-# Hooks are autowired classes in src/Hook.
 services:
   _defaults:
     autowire: true
@@ -7,3 +6,4 @@ services:
       # Content Moderation is optional.
       $moderationInformation: '@?content_moderation.moderation_information'
       $transitionValidation: '@?content_moderation.state_transition_validation'
+  Drupal\headless_frontend_editing_paragraphs\Hook\ParagraphsHooks: {}

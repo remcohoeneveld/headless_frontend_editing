@@ -7,7 +7,6 @@ namespace Drupal\headless_frontend_editing_paragraphs_test\Hook;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
-use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\State\StateInterface;
 
@@ -34,7 +33,6 @@ final class LockedFieldHooks {
    * @param \Drupal\Core\Field\FieldItemListInterface<\Drupal\Core\Field\FieldItemInterface>|null $items
    *   The items.
    */
-  #[Hook('entity_field_access')]
   public function fieldAccess(string $operation, FieldDefinitionInterface $field_definition, AccountInterface $account, ?FieldItemListInterface $items = NULL): AccessResult {
     return AccessResult::forbiddenIf($operation === 'edit' && $field_definition->getName() === $this->state->get(self::STATE))
       ->setCacheMaxAge(0);

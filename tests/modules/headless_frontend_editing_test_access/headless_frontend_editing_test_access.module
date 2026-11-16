@@ -1,0 +1,36 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations; the logic lives in src/Hook/TestAccessHooks.php.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\headless_frontend_editing_test_access\Hook\TestAccessHooks;
+
+/**
+ * Implements hook_entity_field_access().
+ */
+function headless_frontend_editing_test_access_entity_field_access(string $operation, FieldDefinitionInterface $field_definition, AccountInterface $account, ?FieldItemListInterface $items = NULL): AccessResult {
+  return \Drupal::service(TestAccessHooks::class)->fieldAccess($operation, $field_definition, $account, $items);
+}
+
+/**
+ * Implements hook_field_widget_single_element_form_alter().
+ */
+function headless_frontend_editing_test_access_field_widget_single_element_form_alter(array &$element, FormStateInterface $form_state, array $context): void {
+  \Drupal::service(TestAccessHooks::class)->widgetAlter($element, $form_state, $context);
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function headless_frontend_editing_test_access_form_alter(array &$form, FormStateInterface $form_state): void {
+  \Drupal::service(TestAccessHooks::class)->formAlter($form, $form_state);
+}

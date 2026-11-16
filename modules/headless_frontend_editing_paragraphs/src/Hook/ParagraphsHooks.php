@@ -13,7 +13,6 @@ use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\TypedData\TranslatableInterface;
@@ -51,7 +50,6 @@ final class ParagraphsHooks {
    * @param array<string, \Drupal\Core\Entity\EntityTypeInterface> $entity_types
    *   The entity types.
    */
-  #[Hook('entity_type_alter')]
   public function entityTypeAlter(array &$entity_types): void {
     if (isset($entity_types['paragraph'])) {
       $entity_types['paragraph']->setFormClass(EntityFormHooks::OPERATION, ParagraphForm::class);
@@ -68,7 +66,6 @@ final class ParagraphsHooks {
    * @param string $extension
    *   The extension.
    */
-  #[Hook('library_info_alter')]
   public function libraryInfoAlter(array &$libraries, string $extension): void {
     if ($extension === 'headless_frontend_editing' && isset($libraries['host'])) {
       $libraries['host']['js']['/' . $this->moduleList->getPath('headless_frontend_editing_paragraphs') . '/js/actions.js'] = [];
@@ -87,7 +84,6 @@ final class ParagraphsHooks {
    * @param array<string, string> $context
    *   The entity type, bundle and form mode.
    */
-  #[Hook('entity_form_display_alter')]
   public function formDisplayAlter(EntityFormDisplayInterface $form_display, array $context): void {
     if ($context['entity_type'] === 'paragraph'
       || $context['form_mode'] !== $this->configFactory->get('headless_frontend_editing.settings')->get('form_mode')
@@ -113,7 +109,6 @@ final class ParagraphsHooks {
    * @param \Drupal\node\NodeInterface $node
    *   The node shown.
    */
-  #[Hook('headless_frontend_editing_tools_alter')]
   public function toolsAlter(array &$tools, NodeInterface $node): void {
     $url = Url::fromRoute('headless_frontend_editing_paragraphs.order', [
       'langcode' => $node->language()->getId(),
@@ -127,7 +122,6 @@ final class ParagraphsHooks {
   /**
    * Implements hook_headless_frontend_editing_preview_root().
    */
-  #[Hook('headless_frontend_editing_preview_root')]
   public function previewRoot(ContentEntityInterface $entity, FormStateInterface $form_state): ?ContentEntityInterface {
     return $entity instanceof ParagraphInterface ? $this->tree->attach($entity, $form_state->get('hfe_insert')) : NULL;
   }
@@ -139,7 +133,6 @@ final class ParagraphsHooks {
    * root and to the section field of every parent. Paragraphs that are no
    * longer referenced are refused.
    */
-  #[Hook('headless_frontend_editing_target_access')]
   public function targetAccess(Target $target, AccountInterface $account): AccessResultInterface {
     if (!$target->entity instanceof ParagraphInterface) {
       return AccessResult::neutral();
@@ -159,7 +152,6 @@ final class ParagraphsHooks {
    * @param \Drupal\headless_frontend_editing\Target $target
    *   The target.
    */
-  #[Hook('headless_frontend_editing_target_alter')]
   public function targetAlter(array &$description, Target $target): void {
     $paragraph = $target->entity;
     if ($target->fieldName !== NULL || !$paragraph instanceof ParagraphInterface || !$this->tree->load($paragraph->uuid())) {

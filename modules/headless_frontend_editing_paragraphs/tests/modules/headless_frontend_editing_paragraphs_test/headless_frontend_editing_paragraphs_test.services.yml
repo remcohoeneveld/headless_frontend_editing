@@ -1,0 +1,6 @@
+services:
+  _defaults:
+    autowire: true
+  Drupal\headless_frontend_editing_paragraphs_test\Hook\LockedFieldHooks: {}
+  Drupal\headless_frontend_editing_paragraphs_test\Hook\LockedTargetHooks: {}
+  Drupal\headless_frontend_editing_paragraphs_test\Hook\ParagraphAccessHooks: {}

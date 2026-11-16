@@ -1,0 +1,66 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations; the logic lives in src/Hook/ParagraphsHooks.php.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\headless_frontend_editing\Target;
+use Drupal\headless_frontend_editing_paragraphs\Hook\ParagraphsHooks;
+use Drupal\node\NodeInterface;
+
+/**
+ * Implements hook_entity_type_alter().
+ */
+function headless_frontend_editing_paragraphs_entity_type_alter(array &$entity_types): void {
+  \Drupal::service(ParagraphsHooks::class)->entityTypeAlter($entity_types);
+}
+
+/**
+ * Implements hook_library_info_alter().
+ */
+function headless_frontend_editing_paragraphs_library_info_alter(array &$libraries, string $extension): void {
+  \Drupal::service(ParagraphsHooks::class)->libraryInfoAlter($libraries, $extension);
+}
+
+/**
+ * Implements hook_entity_form_display_alter().
+ */
+function headless_frontend_editing_paragraphs_entity_form_display_alter(EntityFormDisplayInterface $form_display, array $context): void {
+  \Drupal::service(ParagraphsHooks::class)->formDisplayAlter($form_display, $context);
+}
+
+/**
+ * Implements hook_headless_frontend_editing_tools_alter().
+ */
+function headless_frontend_editing_paragraphs_headless_frontend_editing_tools_alter(array &$tools, NodeInterface $node): void {
+  \Drupal::service(ParagraphsHooks::class)->toolsAlter($tools, $node);
+}
+
+/**
+ * Implements hook_headless_frontend_editing_preview_root().
+ */
+function headless_frontend_editing_paragraphs_headless_frontend_editing_preview_root(ContentEntityInterface $entity, FormStateInterface $form_state): ?ContentEntityInterface {
+  return \Drupal::service(ParagraphsHooks::class)->previewRoot($entity, $form_state);
+}
+
+/**
+ * Implements hook_headless_frontend_editing_target_access().
+ */
+function headless_frontend_editing_paragraphs_headless_frontend_editing_target_access(Target $target, AccountInterface $account): AccessResultInterface {
+  return \Drupal::service(ParagraphsHooks::class)->targetAccess($target, $account);
+}
+
+/**
+ * Implements hook_headless_frontend_editing_target_alter().
+ */
+function headless_frontend_editing_paragraphs_headless_frontend_editing_target_alter(array &$description, Target $target): void {
+  \Drupal::service(ParagraphsHooks::class)->targetAlter($description, $target);
+}

@@ -6,7 +6,6 @@ namespace Drupal\headless_frontend_editing_test_access\Hook;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -28,7 +27,6 @@ final class TestAccessHooks {
    * @param \Drupal\Core\Field\FieldItemListInterface<\Drupal\Core\Field\FieldItemInterface>|null $items
    *   The items.
    */
-  #[Hook('entity_field_access')]
   public function fieldAccess(string $operation, FieldDefinitionInterface $field_definition, AccountInterface $account, ?FieldItemListInterface $items = NULL): AccessResult {
     return AccessResult::forbiddenIf($operation === 'edit' && $field_definition->getName() === 'promote');
   }
@@ -46,7 +44,6 @@ final class TestAccessHooks {
    * @param array<string, mixed> $context
    *   The widget context.
    */
-  #[Hook('field_widget_single_element_form_alter')]
   public function widgetAlter(array &$element, FormStateInterface $form_state, array $context): void {
     if ($form_state->get('hfe') && $context['items']->getName() === 'title') {
       $element['hfe_test_flag'] = [
@@ -68,7 +65,6 @@ final class TestAccessHooks {
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    */
-  #[Hook('form_alter')]
   public function formAlter(array &$form, FormStateInterface $form_state): void {
     if ($form_state->get('hfe')) {
       $form['#entity_builders'][] = [self::class, 'recordFlag'];

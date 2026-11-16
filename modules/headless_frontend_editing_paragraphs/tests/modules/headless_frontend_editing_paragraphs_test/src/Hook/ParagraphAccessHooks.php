@@ -6,7 +6,6 @@ namespace Drupal\headless_frontend_editing_paragraphs_test\Hook;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\State\StateInterface;
 
@@ -33,7 +32,6 @@ final class ParagraphAccessHooks {
    * @param string|null $bundle
    *   The paragraph type.
    */
-  #[Hook('paragraph_create_access')]
   public function createAccess(AccountInterface $account, array $context, ?string $bundle): AccessResult {
     return AccessResult::forbiddenIf($bundle === $this->state->get(self::NO_CREATE))->setCacheMaxAge(0);
   }
@@ -41,7 +39,6 @@ final class ParagraphAccessHooks {
   /**
    * Implements hook_paragraph_access().
    */
-  #[Hook('paragraph_access')]
   public function access(EntityInterface $paragraph, string $operation, AccountInterface $account): AccessResult {
     return AccessResult::forbiddenIf($operation === 'delete' && $this->state->get(self::NO_DELETE))->setCacheMaxAge(0);
   }

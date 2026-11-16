@@ -45,6 +45,8 @@ final class TargetResolver {
     if (!$definition instanceof ContentEntityTypeInterface || !$definition->hasKey('uuid')) {
       return NULL;
     }
+    // Drupal 10 infers this type from the entity type ID, wrongly here.
+    /** @var \Drupal\Core\Entity\EntityInterface|null $entity */
     $entity = $this->entityRepository->loadEntityByUuid($m[1], $m[2]);
     if (!$entity instanceof ContentEntityInterface) {
       return NULL;

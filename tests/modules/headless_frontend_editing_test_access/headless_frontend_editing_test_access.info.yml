@@ -3,4 +3,4 @@ type: module
 description: 'Denies edit access to the promote field and adds a nested grouped checkbox.'
 package: Testing
 hidden: true
-core_version_requirement: ^11.4 || ^12
+core_version_requirement: ^10.3

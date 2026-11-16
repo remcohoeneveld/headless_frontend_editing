@@ -1,0 +1,47 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations; the logic lives in the classes in src/Hook.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\headless_frontend_editing\Target;
+use Drupal\headless_frontend_editing_paragraphs_test\Hook\LockedFieldHooks;
+use Drupal\headless_frontend_editing_paragraphs_test\Hook\LockedTargetHooks;
+use Drupal\headless_frontend_editing_paragraphs_test\Hook\ParagraphAccessHooks;
+
+/**
+ * Implements hook_entity_field_access().
+ */
+function headless_frontend_editing_paragraphs_test_entity_field_access(string $operation, FieldDefinitionInterface $field_definition, AccountInterface $account, ?FieldItemListInterface $items = NULL): AccessResult {
+  return \Drupal::service(LockedFieldHooks::class)->fieldAccess($operation, $field_definition, $account, $items);
+}
+
+/**
+ * Implements hook_headless_frontend_editing_target_access().
+ */
+function headless_frontend_editing_paragraphs_test_headless_frontend_editing_target_access(Target $target, AccountInterface $account): AccessResultInterface {
+  return \Drupal::service(LockedTargetHooks::class)->targetAccess($target, $account);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_create_access() for paragraph.
+ */
+function headless_frontend_editing_paragraphs_test_paragraph_create_access(AccountInterface $account, array $context, ?string $bundle): AccessResult {
+  return \Drupal::service(ParagraphAccessHooks::class)->createAccess($account, $context, $bundle);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_access() for paragraph.
+ */
+function headless_frontend_editing_paragraphs_test_paragraph_access(EntityInterface $paragraph, string $operation, AccountInterface $account): AccessResult {
+  return \Drupal::service(ParagraphAccessHooks::class)->access($paragraph, $operation, $account);
+}

@@ -12,7 +12,6 @@ use Drupal\Core\Entity\EntityFormInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\RevisionLogInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Render\Element;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\headless_frontend_editing\FieldFocus;
@@ -47,7 +46,6 @@ final class EntityFormHooks {
    * @param array<string, \Drupal\Core\Entity\EntityTypeInterface> $entity_types
    *   The entity types.
    */
-  #[Hook('entity_type_build')]
   public function entityTypeBuild(array &$entity_types): void {
     foreach ($entity_types as $entity_type) {
       $class = $entity_type->getFormClass('edit') ?: $entity_type->getFormClass('default');
@@ -60,7 +58,6 @@ final class EntityFormHooks {
   /**
    * Implements hook_entity_form_mode_alter().
    */
-  #[Hook('entity_form_mode_alter')]
   public function formModeAlter(string &$form_mode, EntityInterface $entity): void {
     if ($form_mode === self::OPERATION) {
       $form_mode = $this->formMode();
@@ -79,7 +76,6 @@ final class EntityFormHooks {
    * @param array<string, string> $context
    *   The entity type, bundle and form mode.
    */
-  #[Hook('entity_form_display_alter')]
   public function formDisplayAlter(EntityFormDisplayInterface $form_display, array $context): void {
     $field_name = $this->fieldFocus->get($context['entity_type'], $context['bundle']);
     if ($field_name === NULL || $context['form_mode'] !== $this->formMode()) {
@@ -100,7 +96,6 @@ final class EntityFormHooks {
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    */
-  #[Hook('form_alter')]
   public function formAlter(array &$form, FormStateInterface $form_state): void {
     if (!$form_state->get('hfe')) {
       return;
@@ -113,7 +108,7 @@ final class EntityFormHooks {
       '#value' => $this->t('Update preview'),
       '#attributes' => ['class' => ['hfe-live'], 'hidden' => TRUE],
       '#ajax' => [
-        'callback' => LivePreview::class . '::callback',
+        'callback' => LivePreview::class . '::ajaxCallback',
         'event' => 'hfe:live',
         'disable-refocus' => TRUE,
         'progress' => ['type' => 'none'],

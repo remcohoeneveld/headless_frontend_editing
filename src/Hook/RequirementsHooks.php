@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Drupal\headless_frontend_editing\Hook;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Extension\Requirement\RequirementSeverity;
-use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Site\Settings;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 
@@ -22,12 +20,11 @@ final class RequirementsHooks {
   ) {}
 
   /**
-   * Implements hook_runtime_requirements().
+   * Runtime requirements, called from hook_requirements().
    *
    * @return array<string, array<string, mixed>>
    *   The requirements.
    */
-  #[Hook('runtime_requirements')]
   public function runtime(): array {
     $config = $this->configFactory->get('headless_frontend_editing.settings');
     $missing = [];
@@ -44,7 +41,7 @@ final class RequirementsHooks {
     return [
       'headless_frontend_editing' => [
         'title' => $this->t('Headless frontend editing'),
-        'severity' => $missing ? RequirementSeverity::Warning : RequirementSeverity::OK,
+        'severity' => $missing ? REQUIREMENT_WARNING : REQUIREMENT_OK,
         'value' => $missing ? $this->t('Not fully configured') : $this->t('Configured'),
         'description' => $missing ? $this->t('Missing: @missing.', ['@missing' => implode(', ', $missing)]) : '',
       ],

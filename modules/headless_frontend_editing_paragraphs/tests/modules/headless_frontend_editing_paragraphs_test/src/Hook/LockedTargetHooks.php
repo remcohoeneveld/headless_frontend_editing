@@ -6,7 +6,6 @@ namespace Drupal\headless_frontend_editing_paragraphs_test\Hook;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
-use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\State\StateInterface;
 use Drupal\headless_frontend_editing\Target;
@@ -25,7 +24,6 @@ final class LockedTargetHooks {
   /**
    * Implements hook_headless_frontend_editing_target_access().
    */
-  #[Hook('headless_frontend_editing_target_access')]
   public function targetAccess(Target $target, AccountInterface $account): AccessResultInterface {
     return AccessResult::forbiddenIf($target->id() === $this->state->get(self::STATE))->setCacheMaxAge(0);
   }

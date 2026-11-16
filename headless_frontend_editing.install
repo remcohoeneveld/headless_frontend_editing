@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions.
+ */
+
+declare(strict_types=1);
+
+use Drupal\headless_frontend_editing\Hook\RequirementsHooks;
+
+/**
+ * Implements hook_requirements().
+ */
+function headless_frontend_editing_requirements(string $phase): array {
+  return $phase === 'runtime' ? \Drupal::service(RequirementsHooks::class)->runtime() : [];
+}

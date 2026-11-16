@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace Drupal\Tests\headless_frontend_editing\Functional;
 
 use Drupal\Tests\BrowserTestBase;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests the settings form.
+ *
+ * @group headless_frontend_editing
+ * @runTestsInSeparateProcesses
  */
-#[Group('headless_frontend_editing')]
-#[RunTestsInSeparateProcesses]
 final class SettingsFormTest extends BrowserTestBase {
 
   /**

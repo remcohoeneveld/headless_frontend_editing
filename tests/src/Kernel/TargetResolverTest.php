@@ -9,15 +9,13 @@ use Drupal\KernelTests\KernelTestBase;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
-use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests resolving target strings.
+ *
+ * @group headless_frontend_editing
+ * @runTestsInSeparateProcesses
  */
-#[Group('headless_frontend_editing')]
-#[RunTestsInSeparateProcesses]
 final class TargetResolverTest extends KernelTestBase {
 
   /**
@@ -74,8 +72,9 @@ final class TargetResolverTest extends KernelTestBase {
 
   /**
    * Tests malformed targets.
+   *
+   * @dataProvider malformed
    */
-  #[DataProvider('malformed')]
   public function testMalformed(string $template): void {
     $this->assertNull($this->resolver()->resolve(str_replace('UUID', $this->node->uuid(), $template), 'en'));
   }

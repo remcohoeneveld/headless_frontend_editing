@@ -8,3 +8,17 @@ parameters:
       - .ddev (?)
       - vendor (?)
       - web (?)
+  ignoreErrors:
+    # The .module and .install files only forward to the typed classes in src/Hook.
+    -
+      identifier: missingType.iterableValue
+      paths:
+        - *.module
+        - *.install
+    -
+      identifier: missingType.generics
+      path: *.module
+    # Drupal 10 types assertSession() as WebAssert; under WebDriverTestBase it is a JSWebAssert.
+    -
+      message: '#^Call to an undefined method Drupal\\Tests\\WebAssert::wait#'
+      path: tests/src/FunctionalJavascript/EditInPreviewTest.php

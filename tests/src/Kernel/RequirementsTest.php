@@ -4,17 +4,15 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\headless_frontend_editing\Kernel;
 
-use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Site\Settings;
 use Drupal\KernelTests\KernelTestBase;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests the status report entry.
+ *
+ * @group headless_frontend_editing
+ * @runTestsInSeparateProcesses
  */
-#[Group('headless_frontend_editing')]
-#[RunTestsInSeparateProcesses]
 final class RequirementsTest extends KernelTestBase {
 
   /**
@@ -28,7 +26,7 @@ final class RequirementsTest extends KernelTestBase {
   public function testWarnings(): void {
     $this->installConfig(['headless_frontend_editing']);
     $requirements = $this->getRequirements();
-    $this->assertSame(RequirementSeverity::Warning, $requirements['headless_frontend_editing']['severity']);
+    $this->assertSame(REQUIREMENT_WARNING, $requirements['headless_frontend_editing']['severity']);
 
     $this->config('headless_frontend_editing.settings')
       ->set('frontend_url', 'https://front.example')
@@ -36,7 +34,7 @@ final class RequirementsTest extends KernelTestBase {
       ->save();
     new Settings(['headless_frontend_editing_revalidate_secret' => 'test-secret'] + Settings::getAll());
     $requirements = $this->getRequirements();
-    $this->assertSame(RequirementSeverity::OK, $requirements['headless_frontend_editing']['severity']);
+    $this->assertSame(REQUIREMENT_OK, $requirements['headless_frontend_editing']['severity']);
   }
 
   /**
@@ -46,7 +44,9 @@ final class RequirementsTest extends KernelTestBase {
    *   The requirements.
    */
   private function getRequirements(): array {
-    return \Drupal::moduleHandler()->invokeAll('runtime_requirements');
+    \Drupal::moduleHandler()->loadInclude('headless_frontend_editing', 'install');
+    require_once DRUPAL_ROOT . '/core/includes/install.inc';
+    return headless_frontend_editing_requirements('runtime');
   }
 
 }

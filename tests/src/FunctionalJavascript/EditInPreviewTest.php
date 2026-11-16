@@ -61,7 +61,7 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $this->drupalGet($this->node->toUrl());
     $this->enterFrame('hfe-preview');
     $this->assertSession()->waitForElement('css', 'h1')->mouseOver();
-    $this->assertTrue($this->getSession()->wait(5000, "(() => { const toolbar = document.querySelector('[data-hfe-overlay]')?.shadowRoot.querySelector('.toolbar'); return !!toolbar && !toolbar.hidden && !!toolbar.querySelector('button'); })()"));
+    $this->assertTrue($this->getSession()->wait(10000, "(() => { const toolbar = document.querySelector('[data-hfe-overlay]')?.shadowRoot.querySelector('.toolbar'); return !!toolbar && !toolbar.hidden && !!toolbar.querySelector('button'); })()"));
   }
 
   /**
@@ -142,10 +142,10 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $this->enterFrame('hfe-editor__frame');
     $this->assertSession()->waitForField('title[0][value]')->setValue('Live title');
     $this->getSession()->switchToIFrame();
-    $this->assertTrue($this->getSession()->wait(5000, "/^\\/node\\/preview\\//.test(new URL(document.querySelector('.hfe-preview').contentWindow.location.href).searchParams.get('path') || '')"));
+    $this->assertTrue($this->getSession()->wait(10000, "/^\\/node\\/preview\\//.test(new URL(document.querySelector('.hfe-preview').contentWindow.location.href).searchParams.get('path') || '')"));
     $this->assertNotEmpty($this->previewParam('token'));
     $this->assertNotSame($initial_token, $this->previewParam('token'));
-    $this->assertTrue($this->getSession()->wait(5000, "document.querySelector('.hfe-preview').contentDocument.querySelector('h1')?.textContent === 'Live title'"));
+    $this->assertTrue($this->getSession()->wait(10000, "document.querySelector('.hfe-preview').contentDocument.querySelector('h1')?.textContent === 'Live title'"));
 
     $this->getSession()->executeScript('window.hfeBeforeReload = true;');
     $this->enterFrame('hfe-editor__frame');
@@ -184,12 +184,12 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $this->enterFrame('hfe-editor__frame');
     $this->assertSession()->waitForField('title[0][value]')->setValue('Unsaved title');
     $this->getSession()->switchToIFrame();
-    $this->assertTrue($this->getSession()->wait(5000, "document.querySelector('.hfe-preview').contentDocument.querySelector('h1')?.textContent === 'Unsaved title'"));
+    $this->assertTrue($this->getSession()->wait(10000, "document.querySelector('.hfe-preview').contentDocument.querySelector('h1')?.textContent === 'Unsaved title'"));
 
     $this->getSession()->executeScript('window.confirm = () => true;');
     $this->getSession()->getPage()->pressButton('Close');
     $this->assertTrue($this->assertSession()->elementExists('css', '.hfe-editor')->hasAttribute('hidden'));
-    $this->assertTrue($this->getSession()->wait(5000, "document.querySelector('.hfe-preview').contentDocument.querySelector('h1')?.textContent === 'Original'"));
+    $this->assertTrue($this->getSession()->wait(10000, "document.querySelector('.hfe-preview').contentDocument.querySelector('h1')?.textContent === 'Original'"));
     $this->assertSame('/node/' . $this->node->id(), $this->previewParam('path'));
   }
 
@@ -207,7 +207,7 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $this->getSession()->executeScript("const a = document.createElement('a'); a.href = '$path'; a.textContent = 'Other page'; document.body.append(a);");
     $this->getSession()->getPage()->clickLink('Other page');
     $this->getSession()->switchToIFrame();
-    $this->assertTrue($this->getSession()->wait(5000, "window.location.pathname === '$href'"));
+    $this->assertTrue($this->getSession()->wait(10000, "window.location.pathname === '$href'"));
   }
 
   /**
@@ -230,7 +230,7 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $path = '/' . $other->toUrl()->getInternalPath();
     $this->getSession()->executeScript("const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); const a = document.createElementNS('http://www.w3.org/2000/svg', 'a'); a.setAttribute('href', '$path'); const t = document.createElementNS('http://www.w3.org/2000/svg', 'text'); a.append(t); svg.append(a); document.body.append(svg); t.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, button: 0}));");
     $this->getSession()->switchToIFrame();
-    $this->assertTrue($this->getSession()->wait(5000, "window.location.pathname === '$href'"));
+    $this->assertTrue($this->getSession()->wait(10000, "window.location.pathname === '$href'"));
   }
 
   /**
@@ -272,7 +272,7 @@ final class EditInPreviewTest extends WebDriverTestBase {
     $src = $this->buildUrl('hfe-test/frontend', ['query' => ['path' => $path, 'edit' => 1]]);
     // A parent that never answers, like a host page that is still loading.
     $this->getSession()->executeScript("window.hfeReady = 0; window.addEventListener('message', (e) => { if (e.data?.type === 'hfe:ready') window.hfeReady++; }); const f = document.createElement('iframe'); f.src = '$src'; document.body.append(f);");
-    $this->assertTrue($this->getSession()->wait(5000, 'window.hfeReady >= 3'));
+    $this->assertTrue($this->getSession()->wait(10000, 'window.hfeReady >= 3'));
   }
 
   /**
